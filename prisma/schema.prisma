@@ -1,0 +1,95 @@
+// Prisma schema for the Learning Center management app.
+// Docs: https://pris.ly/d/prisma-schema
+//
+// Note: SQLite (dev) does not support native enums, so role/type fields are
+// stored as String and validated in the app layer (see src/lib/constants.ts
+// and src/lib/validations.ts). This keeps an easy migration path to Postgres.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+/// Application user. One table for all three roles (ADMIN | TEACHER | STUDENT).
+model User {
+  id           String  @id @default(cuid())
+  name         String
+  email        String  @unique
+  passwordHash String
+  role         String // "ADMIN" | "TEACHER" | "STUDENT"
+  avatarUrl    String?
+  active       Boolean @default(true)
+
+  // Students belong to a group/cohort. Null for teachers and admins.
+  groupId String?
+  group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  // Relations
+  gradesReceived  Grade[]          @relation("StudentGrades")
+  gradesGiven     Grade[]          @relation("TeacherGrades")
+  teacherSubjects TeacherSubject[] @relation("TeacherAssignments")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+}
+
+/// A class/cohort of students.
+model Group {
+  id              String           @id @default(cuid())
+  name            String           @unique
+  students        User[]
+  teacherSubjects TeacherSubject[]
+  createdAt       DateTime         @default(now())
+}
+
+/// A subject / "sphere" of study.
+model Subject {
+  id              String           @id @default(cuid())
+  name            String           @unique
+  description     String?
+  grades          Grade[]
+  teacherSubjects TeacherSubject[]
+  createdAt       DateTime         @default(now())
+}
+
+/// Assignment of a teacher to teach a subject to a specific group.
+model TeacherSubject {
+  id        String  @id @default(cuid())
+  teacher   User    @relation("TeacherAssignments", fields: [teacherId], references: [id], onDelete: Cascade)
+  teacherId String
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subjectId String
+  group     Group   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId   String
+
+  @@unique([teacherId, subjectId, groupId])
+  @@index([subjectId, groupId])
+}
+
+/// A single mark/grade given to a student in a subject by a teacher.
+model Grade {
+  id        String  @id @default(cuid())
+  student   User    @relation("StudentGrades", fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  subjectId String
+  teacher   User    @relation("TeacherGrades", fields: [teacherId], references: [id], onDelete: Cascade)
+  teacherId String
+
+  value    Float
+  maxValue Float    @default(100)
+  type     String // "EXAM" | "QUIZ" | "HOMEWORK" | "PROJECT"
+  comment  String?
+  date     DateTime @default(now())
+
+  createdAt DateTime @default(now())
+
+  @@index([studentId, subjectId])
+  @@index([date])
+}
