@@ -102,7 +102,7 @@ export default async function LandingPage() {
 
       {/* CTA */}
       <section className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-indigo-800 px-8 py-14 text-center text-white">
+        <div className="bg-brand-gradient relative overflow-hidden rounded-3xl px-8 py-14 text-center text-white">
           <div className="absolute -right-16 -top-16 size-56 rounded-full bg-white/10 blur-2xl" />
           <h2 className="relative text-3xl font-bold">{t("ctaTitle")}</h2>
           <p className="relative mx-auto mt-3 max-w-md text-white/80">{t("ctaBody")}</p>

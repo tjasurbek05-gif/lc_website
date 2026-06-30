@@ -18,20 +18,21 @@ datasource db {
 model User {
   id           String  @id @default(cuid())
   name         String
-  email        String  @unique
+  phone        String  @unique // login identifier (replaces email)
   passwordHash String
   role         String // "ADMIN" | "TEACHER" | "STUDENT"
   avatarUrl    String?
   active       Boolean @default(true)
 
-  // Students belong to a group/cohort. Null for teachers and admins.
-  groupId String?
-  group   Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
-
-  // Relations
-  gradesReceived  Grade[]          @relation("StudentGrades")
-  gradesGiven     Grade[]          @relation("TeacherGrades")
-  teacherSubjects TeacherSubject[] @relation("TeacherAssignments")
+  // Relations.
+  // Students are enrolled into groups (classes) — implicit many-to-many. A
+  // student may be enrolled in groups across at most 2 subjects, enforced in
+  // the app layer (see src/app/actions/admin.ts). A teacher owns the groups
+  // they teach via "GroupTeacher".
+  enrolledGroups Group[] @relation("GroupStudents")
+  groupsTaught   Group[] @relation("GroupTeacher")
+  gradesReceived Grade[] @relation("StudentGrades")
+  gradesGiven    Grade[] @relation("TeacherGrades")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -39,37 +40,36 @@ model User {
   @@index([role])
 }
 
-/// A class/cohort of students.
-model Group {
-  id              String           @id @default(cuid())
-  name            String           @unique
-  students        User[]
-  teacherSubjects TeacherSubject[]
-  createdAt       DateTime         @default(now())
-}
-
-/// A subject / "sphere" of study.
+/// A subject / "sphere" of study. Groups (classes) live under a subject.
 model Subject {
-  id              String           @id @default(cuid())
-  name            String           @unique
-  description     String?
-  grades          Grade[]
-  teacherSubjects TeacherSubject[]
-  createdAt       DateTime         @default(now())
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  groups      Group[]
+  grades      Grade[]
+  createdAt   DateTime @default(now())
 }
 
-/// Assignment of a teacher to teach a subject to a specific group.
-model TeacherSubject {
+/// A class within a subject. Has one teacher and a roster of enrolled students.
+model Group {
   id        String  @id @default(cuid())
-  teacher   User    @relation("TeacherAssignments", fields: [teacherId], references: [id], onDelete: Cascade)
-  teacherId String
+  name      String
   subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   subjectId String
-  group     Group   @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  groupId   String
 
-  @@unique([teacherId, subjectId, groupId])
-  @@index([subjectId, groupId])
+  // The teacher of this class (optional — a class can exist before a teacher
+  // is assigned). Cleared if the teacher account is removed.
+  teacher   User?   @relation("GroupTeacher", fields: [teacherId], references: [id], onDelete: SetNull)
+  teacherId String?
+
+  // Enrolled students (implicit many-to-many).
+  students User[] @relation("GroupStudents")
+
+  createdAt DateTime @default(now())
+
+  @@unique([subjectId, name])
+  @@index([subjectId])
+  @@index([teacherId])
 }
 
 /// A single mark/grade given to a student in a subject by a teacher.

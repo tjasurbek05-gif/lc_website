@@ -13,107 +13,105 @@ const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n
 async function main() {
   console.log("Seeding database…");
 
-  // Clean slate (respecting FK order).
+  // Clean slate (respecting FK order). Deleting groups also clears the
+  // implicit student-enrollment join rows.
   await prisma.grade.deleteMany();
-  await prisma.teacherSubject.deleteMany();
-  await prisma.user.deleteMany();
   await prisma.group.deleteMany();
+  await prisma.user.deleteMany();
   await prisma.subject.deleteMany();
 
   const passwordHash = await bcrypt.hash(PASSWORD, 10);
 
-  // Groups
-  const groupA = await prisma.group.create({ data: { name: "Group A" } });
-  const groupB = await prisma.group.create({ data: { name: "Group B" } });
-
-  // Subjects
+  // --- Subjects ---
   const subjectDefs = [
     { name: "Mathematics", description: "Algebra, geometry and problem solving." },
     { name: "English", description: "Reading, writing and speaking skills." },
     { name: "Physics", description: "Mechanics, energy and motion." },
     { name: "Computer Science", description: "Programming and algorithms." },
-    { name: "Chemistry", description: "Matter, reactions and lab work." },
   ];
   const subjects: Record<string, { id: string }> = {};
   for (const def of subjectDefs) {
     subjects[def.name] = await prisma.subject.create({ data: def });
   }
 
-  // Admin
+  // --- Admin ---
   await prisma.user.create({
     data: {
       name: "Admin User",
-      email: "admin@demo.com",
+      phone: "+998901112201",
       passwordHash,
       role: ROLES.ADMIN,
     },
   });
 
-  // Teachers
+  // --- Teachers ---
   const teacherDefs = [
-    { name: "Sarah Johnson", email: "teacher@demo.com" },
-    { name: "David Miller", email: "david@demo.com" },
-    { name: "Aziza Karimova", email: "aziza@demo.com" },
+    { key: "sarah", name: "Sarah Johnson", phone: "+998901112202" }, // demo teacher
+    { key: "david", name: "David Miller", phone: "+998901112204" },
+    { key: "aziza", name: "Aziza Karimova", phone: "+998901112205" },
   ];
   const teachers: Record<string, { id: string }> = {};
   for (const def of teacherDefs) {
-    teachers[def.email] = await prisma.user.create({
-      data: { ...def, passwordHash, role: ROLES.TEACHER },
+    teachers[def.key] = await prisma.user.create({
+      data: { name: def.name, phone: def.phone, passwordHash, role: ROLES.TEACHER },
     });
   }
 
-  // Students (first one is the demo student, placed in Group A).
-  const studentNames = [
-    "Alex Student",
-    "Emma Wilson",
-    "Liam Brown",
-    "Olivia Davis",
-    "Noah Garcia",
-    "Sophia Martinez",
-    "Jamshid Rakhimov",
-    "Madina Yusupova",
-    "Ethan Clark",
-    "Ava Lewis",
-    "Bekzod Tursunov",
-    "Nilufar Saidova",
+  // --- Groups (classes within a subject, each owned by a teacher) ---
+  const groupDefs = [
+    { key: "mathMorning", name: "Morning group", subject: "Mathematics", teacher: "sarah" },
+    { key: "mathEvening", name: "Evening group", subject: "Mathematics", teacher: "sarah" },
+    { key: "englishA1", name: "Level A1", subject: "English", teacher: "aziza" },
+    { key: "physicsG1", name: "Group 1", subject: "Physics", teacher: "david" },
+    { key: "csBeginners", name: "Beginners", subject: "Computer Science", teacher: "david" },
   ];
-  const students: { id: string; groupId: string }[] = [];
-  for (let i = 0; i < studentNames.length; i++) {
-    const name = studentNames[i];
-    const email =
-      i === 0 ? "student@demo.com" : `${name.toLowerCase().split(" ")[0]}${i}@demo.com`;
-    const groupId = i % 2 === 0 ? groupA.id : groupB.id;
+  const groups: Record<
+    string,
+    { id: string; subjectId: string; teacherId: string }
+  > = {};
+  for (const def of groupDefs) {
+    const subjectId = subjects[def.subject].id;
+    const teacherId = teachers[def.teacher].id;
+    const g = await prisma.group.create({
+      data: { name: def.name, subjectId, teacherId },
+    });
+    groups[def.key] = { id: g.id, subjectId, teacherId };
+  }
+
+  // --- Students + enrollment ---
+  // Most students take a single subject; a few take two (never more — the app
+  // enforces a hard cap of 2). The first student is the demo login.
+  const studentDefs: { name: string; phone: string; groups: string[] }[] = [
+    { name: "Alex Student", phone: "+998901112203", groups: ["mathMorning", "englishA1"] },
+    { name: "Emma Wilson", phone: "+998901112206", groups: ["mathMorning"] },
+    { name: "Liam Brown", phone: "+998901112207", groups: ["mathEvening"] },
+    { name: "Olivia Davis", phone: "+998901112208", groups: ["englishA1"] },
+    { name: "Noah Garcia", phone: "+998901112209", groups: ["physicsG1"] },
+    { name: "Sophia Martinez", phone: "+998901112210", groups: ["csBeginners"] },
+    { name: "Jamshid Rakhimov", phone: "+998901112211", groups: ["mathMorning", "physicsG1"] },
+    { name: "Madina Yusupova", phone: "+998901112212", groups: ["englishA1"] },
+    { name: "Ethan Clark", phone: "+998901112213", groups: ["mathEvening"] },
+    { name: "Ava Lewis", phone: "+998901112214", groups: ["csBeginners", "englishA1"] },
+    { name: "Bekzod Tursunov", phone: "+998901112215", groups: ["physicsG1"] },
+    { name: "Nilufar Saidova", phone: "+998901112216", groups: ["mathMorning"] },
+  ];
+
+  // (student, group) pairs to grade afterwards.
+  const enrollments: { studentId: string; groupKey: string }[] = [];
+  for (const def of studentDefs) {
     const user = await prisma.user.create({
-      data: { name, email, passwordHash, role: ROLES.STUDENT, groupId },
+      data: {
+        name: def.name,
+        phone: def.phone,
+        passwordHash,
+        role: ROLES.STUDENT,
+        enrolledGroups: { connect: def.groups.map((k) => ({ id: groups[k].id })) },
+      },
     });
-    students.push({ id: user.id, groupId });
+    for (const groupKey of def.groups) enrollments.push({ studentId: user.id, groupKey });
   }
 
-  // Teaching assignments: which teacher teaches which subject to which group.
-  const assignments = [
-    { teacher: "teacher@demo.com", subject: "Mathematics", group: groupA.id },
-    { teacher: "teacher@demo.com", subject: "Mathematics", group: groupB.id },
-    { teacher: "teacher@demo.com", subject: "Physics", group: groupB.id },
-    { teacher: "david@demo.com", subject: "Physics", group: groupA.id },
-    { teacher: "david@demo.com", subject: "Computer Science", group: groupA.id },
-    { teacher: "david@demo.com", subject: "Computer Science", group: groupB.id },
-    { teacher: "aziza@demo.com", subject: "English", group: groupA.id },
-    { teacher: "aziza@demo.com", subject: "English", group: groupB.id },
-    { teacher: "aziza@demo.com", subject: "Chemistry", group: groupB.id },
-  ];
-
-  // teacherId for a given (subjectId, groupId)
-  const teacherFor = new Map<string, string>();
-  for (const a of assignments) {
-    const teacherId = teachers[a.teacher].id;
-    const subjectId = subjects[a.subject].id;
-    await prisma.teacherSubject.create({
-      data: { teacherId, subjectId, groupId: a.group },
-    });
-    teacherFor.set(`${subjectId}:${a.group}`, teacherId);
-  }
-
-  // Grades: ~6 marks per student-subject over the last 6 months, trending upward.
+  // --- Grades: ~6 marks per (student, class) over the last 6 months, trending up. ---
   const now = new Date();
   const POINTS = 6;
   const gradeRows: {
@@ -126,43 +124,34 @@ async function main() {
     date: Date;
   }[] = [];
 
-  for (const student of students) {
-    const subjectsForGroup = assignments.filter((a) => a.group === student.groupId);
-    for (const a of subjectsForGroup) {
-      const subjectId = subjects[a.subject].id;
-      const teacherId = teacherFor.get(`${subjectId}:${student.groupId}`);
-      if (!teacherId) continue;
-      const baseline = rand(58, 84); // student's starting ability in this subject
-      for (let p = 0; p < POINTS; p++) {
-        const monthsAgo = POINTS - 1 - p;
-        const date = new Date(
-          now.getFullYear(),
-          now.getMonth() - monthsAgo,
-          randInt(3, 25),
-        );
-        const value = Math.round(clamp(baseline + p * 2 + rand(-8, 8), 35, 100));
-        gradeRows.push({
-          studentId: student.id,
-          subjectId,
-          teacherId,
-          value,
-          maxValue: 100,
-          type: GRADE_TYPES[p % GRADE_TYPES.length],
-          date,
-        });
-      }
+  for (const { studentId, groupKey } of enrollments) {
+    const group = groups[groupKey];
+    const baseline = rand(58, 84); // starting ability in this subject
+    for (let p = 0; p < POINTS; p++) {
+      const monthsAgo = POINTS - 1 - p;
+      const date = new Date(now.getFullYear(), now.getMonth() - monthsAgo, randInt(3, 25));
+      const value = Math.round(clamp(baseline + p * 2 + rand(-8, 8), 35, 100));
+      gradeRows.push({
+        studentId,
+        subjectId: group.subjectId,
+        teacherId: group.teacherId,
+        value,
+        maxValue: 100,
+        type: GRADE_TYPES[p % GRADE_TYPES.length],
+        date,
+      });
     }
   }
 
   await prisma.grade.createMany({ data: gradeRows });
 
   console.log(
-    `Seeded: 2 groups, ${subjectDefs.length} subjects, 1 admin, ${teacherDefs.length} teachers, ${students.length} students, ${gradeRows.length} grades.`,
+    `Seeded: ${subjectDefs.length} subjects, ${groupDefs.length} classes, 1 admin, ${teacherDefs.length} teachers, ${studentDefs.length} students, ${gradeRows.length} grades.`,
   );
   console.log("\nDemo logins (password: password123):");
-  console.log("  Admin   → admin@demo.com");
-  console.log("  Teacher → teacher@demo.com");
-  console.log("  Student → student@demo.com");
+  console.log("  Admin   → +998901112201");
+  console.log("  Teacher → +998901112202");
+  console.log("  Student → +998901112203");
 }
 
 main()

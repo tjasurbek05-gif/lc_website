@@ -9,7 +9,7 @@ export default async function TeacherLayout({
 }) {
   const session = await requireRole(ROLES.TEACHER);
   return (
-    <AppShell role={ROLES.TEACHER} user={{ name: session.name, email: session.email }}>
+    <AppShell role={ROLES.TEACHER} user={{ name: session.name, phone: session.phone }}>
       {children}
     </AppShell>
   );

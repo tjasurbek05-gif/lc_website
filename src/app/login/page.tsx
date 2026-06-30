@@ -17,7 +17,7 @@ export default async function LoginPage() {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       {/* Brand panel */}
-      <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-indigo-600 via-violet-600 to-indigo-800 p-10 text-white lg:flex">
+      <div className="bg-brand-gradient relative hidden flex-col justify-between overflow-hidden p-10 text-white lg:flex">
         <div className="absolute -right-24 -top-24 size-72 rounded-full bg-white/10 blur-3xl" />
         <div className="absolute -bottom-24 -left-16 size-72 rounded-full bg-white/10 blur-3xl" />
         <Logo variant="light" />

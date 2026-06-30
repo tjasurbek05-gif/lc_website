@@ -19,10 +19,8 @@ import { deleteUser, saveUser } from "@/app/actions/admin";
 export type UserRow = {
   id: string;
   name: string;
-  email: string;
+  phone: string;
   role: string;
-  groupId: string | null;
-  groupName: string | null;
 };
 
 function roleVariant(role: string): "danger" | "primary" | "default" {
@@ -31,12 +29,20 @@ function roleVariant(role: string): "danger" | "primary" | "default" {
   return "default";
 }
 
+/** Map a dashboard quick-action hint (?new=teacher) to a starting role. */
+function roleFromNew(value?: string | null): string {
+  const r = (value ?? "").toUpperCase();
+  if (r === ROLES.TEACHER) return ROLES.TEACHER;
+  if (r === ROLES.ADMIN) return ROLES.ADMIN;
+  return ROLES.STUDENT;
+}
+
 export function UsersManager({
   users,
-  groups,
+  initialNewRole,
 }: {
   users: UserRow[];
-  groups: { id: string; name: string }[];
+  initialNewRole?: string | null;
 }) {
   const t = useTranslations("admin");
   const tc = useTranslations("common");
@@ -44,9 +50,11 @@ export function UsersManager({
   const te = useTranslations("errors");
   const router = useRouter();
 
-  const [open, setOpen] = useState(false);
+  // Open the "add user" modal pre-set to a role when arriving from a dashboard
+  // quick action (e.g. /admin/users?new=teacher) — initialised on mount.
+  const [open, setOpen] = useState(Boolean(initialNewRole));
   const [editing, setEditing] = useState<UserRow | null>(null);
-  const [role, setRole] = useState<string>(ROLES.STUDENT);
+  const [role, setRole] = useState<string>(() => roleFromNew(initialNewRole));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
@@ -85,7 +93,10 @@ export function UsersManager({
   return (
     <>
       <div className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold tracking-tight">{t("usersTitle")}</h1>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{t("usersTitle")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("peopleHint")}</p>
+        </div>
         <Button onClick={openAdd}>
           <Plus />
           {t("addUser")}
@@ -98,9 +109,8 @@ export function UsersManager({
             <THead>
               <TR>
                 <TH className="pl-5">{tc("name")}</TH>
-                <TH>{tc("email")}</TH>
+                <TH>{tc("phone")}</TH>
                 <TH>{tc("role")}</TH>
-                <TH>{tc("group")}</TH>
                 <TH className="pr-5 text-right">{tc("actions")}</TH>
               </TR>
             </THead>
@@ -113,11 +123,10 @@ export function UsersManager({
                       <span className="font-medium">{u.name}</span>
                     </div>
                   </TD>
-                  <TD className="text-muted-foreground">{u.email}</TD>
+                  <TD className="text-muted-foreground">{u.phone}</TD>
                   <TD>
                     <Badge variant={roleVariant(u.role)}>{tr(u.role)}</Badge>
                   </TD>
-                  <TD className="text-muted-foreground">{u.groupName ?? "—"}</TD>
                   <TD className="pr-5">
                     <div className="flex justify-end gap-1">
                       <Button
@@ -159,47 +168,34 @@ export function UsersManager({
             <Input id="name" name="name" defaultValue={editing?.name ?? ""} required />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="email">{tc("email")}</Label>
+            <Label htmlFor="phone">{tc("phone")}</Label>
             <Input
-              id="email"
-              name="email"
-              type="email"
-              defaultValue={editing?.email ?? ""}
+              id="phone"
+              name="phone"
+              type="tel"
+              inputMode="tel"
+              autoComplete="off"
+              placeholder={tc("phonePlaceholder")}
+              defaultValue={editing?.phone ?? ""}
               required
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="role">{tc("role")}</Label>
-              <Select
-                id="role"
-                name="role"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-              >
-                {ALL_ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {tr(r)}
-                  </option>
-                ))}
-              </Select>
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="role">{tc("role")}</Label>
+            <Select
+              id="role"
+              name="role"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+            >
+              {ALL_ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {tr(r)}
+                </option>
+              ))}
+            </Select>
             {role === ROLES.STUDENT ? (
-              <div className="space-y-1.5">
-                <Label htmlFor="groupId">{tc("group")}</Label>
-                <Select
-                  id="groupId"
-                  name="groupId"
-                  defaultValue={editing?.groupId ?? ""}
-                >
-                  <option value="">{tc("none")}</option>
-                  {groups.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
+              <p className="text-xs text-muted-foreground">{t("enrollHint")}</p>
             ) : null}
           </div>
           <div className="space-y-1.5">

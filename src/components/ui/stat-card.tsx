@@ -15,14 +15,15 @@ export function StatCard({
   hint?: string;
   accent?: "primary" | "success" | "warning" | "danger";
 }) {
+  // The icon chip uses a vivid gradient for a modern, energetic look.
   const accentClasses: Record<string, string> = {
-    primary: "bg-primary/10 text-primary",
-    success: "bg-success/10 text-success",
-    warning: "bg-warning/10 text-warning",
-    danger: "bg-destructive/10 text-destructive",
+    primary: "bg-brand-gradient text-white shadow-sm",
+    success: "bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-sm",
+    warning: "bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-sm",
+    danger: "bg-gradient-to-br from-rose-500 to-pink-500 text-white shadow-sm",
   };
   return (
-    <Card className="p-5">
+    <Card className="relative overflow-hidden p-5 transition-shadow hover:shadow-md">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-muted-foreground">{label}</p>

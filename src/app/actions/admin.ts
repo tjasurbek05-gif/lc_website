@@ -5,14 +5,18 @@ import { prisma } from "@/lib/prisma";
 import { hashPassword, requireRole } from "@/lib/auth";
 import { ROLES } from "@/lib/constants";
 import {
+  enrollmentSchema,
   groupSchema,
+  normalizePhone,
   subjectSchema,
-  teacherAssignmentSchema,
   userCreateSchema,
   userUpdateSchema,
 } from "@/lib/validations";
 
 export type ActionState = { error?: string; ok?: boolean };
+
+/** A student may be enrolled in classes spanning at most this many subjects. */
+const MAX_SUBJECTS_PER_STUDENT = 2;
 
 function revalidateAdmin(path: string) {
   revalidatePath(path);
@@ -29,9 +33,8 @@ export async function saveUser(
   const id = (formData.get("id") as string) || "";
   const raw = {
     name: formData.get("name"),
-    email: formData.get("email"),
+    phone: formData.get("phone"),
     role: formData.get("role"),
-    groupId: (formData.get("groupId") as string) || null,
     password: (formData.get("password") as string) || "",
   };
 
@@ -41,21 +44,19 @@ export async function saveUser(
     const d = parsed.data;
     const data: {
       name: string;
-      email: string;
+      phone: string;
       role: string;
-      groupId: string | null;
       passwordHash?: string;
     } = {
       name: d.name,
-      email: d.email.toLowerCase(),
+      phone: normalizePhone(d.phone),
       role: d.role,
-      groupId: d.role === ROLES.STUDENT ? d.groupId || null : null,
     };
     if (d.password) data.passwordHash = await hashPassword(d.password);
     try {
       await prisma.user.update({ where: { id }, data });
     } catch {
-      return { error: "emailTaken" };
+      return { error: "phoneTaken" };
     }
   } else {
     const parsed = userCreateSchema.safeParse(raw);
@@ -65,14 +66,13 @@ export async function saveUser(
       await prisma.user.create({
         data: {
           name: d.name,
-          email: d.email.toLowerCase(),
+          phone: normalizePhone(d.phone),
           role: d.role,
-          groupId: d.role === ROLES.STUDENT ? d.groupId || null : null,
           passwordHash: await hashPassword(d.password),
         },
       });
     } catch {
-      return { error: "emailTaken" };
+      return { error: "phoneTaken" };
     }
   }
 
@@ -85,40 +85,7 @@ export async function deleteUser(id: string) {
   if (id === session.userId) return; // never delete yourself
   await prisma.user.delete({ where: { id } });
   revalidateAdmin("/admin/users");
-}
-
-/* ----------------------------- Groups ----------------------------- */
-
-export async function saveGroup(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  await requireRole(ROLES.ADMIN);
-  const parsed = groupSchema.safeParse({
-    id: (formData.get("id") as string) || undefined,
-    name: formData.get("name"),
-  });
-  if (!parsed.success) return { error: "invalid" };
-  try {
-    if (parsed.data.id) {
-      await prisma.group.update({
-        where: { id: parsed.data.id },
-        data: { name: parsed.data.name },
-      });
-    } else {
-      await prisma.group.create({ data: { name: parsed.data.name } });
-    }
-  } catch {
-    return { error: "nameTaken" };
-  }
-  revalidateAdmin("/admin/groups");
-  return { ok: true };
-}
-
-export async function deleteGroup(id: string) {
-  await requireRole(ROLES.ADMIN);
-  await prisma.group.delete({ where: { id } });
-  revalidateAdmin("/admin/groups");
+  revalidatePath("/admin/subjects");
 }
 
 /* ----------------------------- Subjects ----------------------------- */
@@ -158,30 +125,99 @@ export async function deleteSubject(id: string) {
   revalidateAdmin("/admin/subjects");
 }
 
-/* ----------------------------- Assignments ----------------------------- */
+/* ------------------------- Groups (classes) ------------------------- */
 
-export async function createAssignment(
+export async function saveGroup(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
   await requireRole(ROLES.ADMIN);
-  const parsed = teacherAssignmentSchema.safeParse({
-    teacherId: formData.get("teacherId"),
+  const parsed = groupSchema.safeParse({
+    id: (formData.get("id") as string) || undefined,
+    name: formData.get("name"),
     subjectId: formData.get("subjectId"),
-    groupId: formData.get("groupId"),
+    teacherId: (formData.get("teacherId") as string) || null,
   });
   if (!parsed.success) return { error: "invalid" };
+  const d = parsed.data;
+
+  // Guard: a teacher must reference an actual TEACHER account.
+  if (d.teacherId) {
+    const teacher = await prisma.user.findUnique({ where: { id: d.teacherId } });
+    if (!teacher || teacher.role !== ROLES.TEACHER) return { error: "invalid" };
+  }
+
   try {
-    await prisma.teacherSubject.create({ data: parsed.data });
+    if (d.id) {
+      await prisma.group.update({
+        where: { id: d.id },
+        data: { name: d.name, subjectId: d.subjectId, teacherId: d.teacherId },
+      });
+    } else {
+      await prisma.group.create({
+        data: { name: d.name, subjectId: d.subjectId, teacherId: d.teacherId },
+      });
+    }
   } catch {
-    return { error: "duplicate" };
+    return { error: "nameTaken" };
   }
   revalidateAdmin("/admin/subjects");
   return { ok: true };
 }
 
-export async function deleteAssignment(id: string) {
+export async function deleteGroup(id: string) {
   await requireRole(ROLES.ADMIN);
-  await prisma.teacherSubject.delete({ where: { id } });
+  await prisma.group.delete({ where: { id } });
   revalidateAdmin("/admin/subjects");
+}
+
+/* --------------------------- Enrollment ---------------------------- */
+
+/**
+ * Enroll a student into a class (group). Enforces the rule that a student may
+ * only ever study up to MAX_SUBJECTS_PER_STUDENT distinct subjects.
+ */
+export async function enrollStudent(
+  groupId: string,
+  studentId: string,
+): Promise<ActionState> {
+  await requireRole(ROLES.ADMIN);
+  const parsed = enrollmentSchema.safeParse({ groupId, studentId });
+  if (!parsed.success) return { error: "invalid" };
+
+  const [group, student] = await Promise.all([
+    prisma.group.findUnique({ where: { id: groupId }, select: { subjectId: true } }),
+    prisma.user.findUnique({
+      where: { id: studentId },
+      select: { role: true, enrolledGroups: { select: { subjectId: true } } },
+    }),
+  ]);
+  if (!group || !student || student.role !== ROLES.STUDENT) return { error: "invalid" };
+
+  const currentSubjects = new Set(student.enrolledGroups.map((g) => g.subjectId));
+  if (!currentSubjects.has(group.subjectId) && currentSubjects.size >= MAX_SUBJECTS_PER_STUDENT) {
+    return { error: "subjectLimit" };
+  }
+
+  await prisma.group.update({
+    where: { id: groupId },
+    data: { students: { connect: { id: studentId } } },
+  });
+  revalidateAdmin("/admin/subjects");
+  return { ok: true };
+}
+
+export async function unenrollStudent(
+  groupId: string,
+  studentId: string,
+): Promise<ActionState> {
+  await requireRole(ROLES.ADMIN);
+  const parsed = enrollmentSchema.safeParse({ groupId, studentId });
+  if (!parsed.success) return { error: "invalid" };
+  await prisma.group.update({
+    where: { id: groupId },
+    data: { students: { disconnect: { id: studentId } } },
+  });
+  revalidateAdmin("/admin/subjects");
+  return { ok: true };
 }
