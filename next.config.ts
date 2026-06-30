@@ -4,6 +4,7 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ['5.189.155.192'],
   // The generated Prisma client and better-sqlite3 are server-only native deps.
   serverExternalPackages: [
     "@prisma/client",
