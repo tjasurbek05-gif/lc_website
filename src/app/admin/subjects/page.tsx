@@ -11,7 +11,7 @@ export default async function AdminSubjectsPage({
   await requireRole(ROLES.ADMIN);
   const sp = await searchParams;
 
-  const [subjects, teachers, students] = await Promise.all([
+  const [subjects, teachers, students, rooms] = await Promise.all([
     prisma.subject.findMany({
       orderBy: { name: "asc" },
       include: {
@@ -20,6 +20,10 @@ export default async function AdminSubjectsPage({
           include: {
             teacher: { select: { id: true, name: true } },
             students: { select: { id: true, name: true }, orderBy: { name: "asc" } },
+            schedules: {
+              orderBy: [{ weekday: "asc" }, { startTime: "asc" }],
+              include: { room: { select: { id: true, name: true } } },
+            },
           },
         },
       },
@@ -38,6 +42,7 @@ export default async function AdminSubjectsPage({
         enrolledGroups: { select: { subjectId: true } },
       },
     }),
+    prisma.room.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
 
   const subjectData = subjects.map((s) => ({
@@ -49,6 +54,13 @@ export default async function AdminSubjectsPage({
       name: g.name,
       teacher: g.teacher,
       students: g.students,
+      schedules: g.schedules.map((sc) => ({
+        id: sc.id,
+        weekday: sc.weekday,
+        startTime: sc.startTime,
+        durationMin: sc.durationMin,
+        room: sc.room,
+      })),
     })),
   }));
 
@@ -65,6 +77,7 @@ export default async function AdminSubjectsPage({
       subjects={subjectData}
       teachers={teachers}
       students={studentData}
+      rooms={rooms}
       initialNew={Boolean(sp.new)}
     />
   );

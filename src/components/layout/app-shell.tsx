@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   BookOpen,
+  CalendarDays,
   ClipboardList,
   GraduationCap,
   LayoutDashboard,
@@ -27,13 +28,16 @@ const NAV: Record<Role, NavItem[]> = {
     { href: "/admin", key: "dashboard", icon: LayoutDashboard },
     { href: "/admin/users", key: "people", icon: Users },
     { href: "/admin/subjects", key: "subjects", icon: BookOpen },
+    { href: "/admin/schedule", key: "schedule", icon: CalendarDays },
   ],
   TEACHER: [
     { href: "/teacher", key: "dashboard", icon: LayoutDashboard },
+    { href: "/teacher/schedule", key: "schedule", icon: CalendarDays },
     { href: "/teacher/grades", key: "grades", icon: ClipboardList },
   ],
   STUDENT: [
     { href: "/student", key: "dashboard", icon: LayoutDashboard },
+    { href: "/student/calendar", key: "calendar", icon: CalendarDays },
     { href: "/student/grades", key: "myGrades", icon: GraduationCap },
   ],
 };

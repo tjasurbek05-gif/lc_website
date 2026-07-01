@@ -1,7 +1,13 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { GRADE_TYPES, ROLES } from "@/lib/constants";
+import {
+  ATTENDANCE_STATUS,
+  GRADE_TYPES,
+  LESSON_STATUS,
+  ROLES,
+} from "@/lib/constants";
+import { addDays, startOfWeek } from "@/lib/utils";
 
 const PASSWORD = "password123";
 
@@ -10,13 +16,23 @@ const rand = (min: number, max: number) => Math.random() * (max - min) + min;
 const randInt = (min: number, max: number) => Math.floor(rand(min, max + 1));
 const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
 
+/** Combine a Date's day with an "HH:MM" time into a new local Date. */
+function atTime(day: Date, hhmm: string): Date {
+  const [h, m] = hhmm.split(":").map(Number);
+  return new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, m, 0, 0);
+}
+
 async function main() {
   console.log("Seeding database…");
 
   // Clean slate (respecting FK order). Deleting groups also clears the
   // implicit student-enrollment join rows.
+  await prisma.attendance.deleteMany();
+  await prisma.lesson.deleteMany();
+  await prisma.classSchedule.deleteMany();
   await prisma.grade.deleteMany();
   await prisma.group.deleteMany();
+  await prisma.room.deleteMany();
   await prisma.user.deleteMany();
   await prisma.subject.deleteMany();
 
@@ -145,8 +161,94 @@ async function main() {
 
   await prisma.grade.createMany({ data: gradeRows });
 
+  // --- Rooms ---
+  const roomDefs = ["Room 1", "Room 2", "Room 3"];
+  const rooms: Record<string, { id: string }> = {};
+  for (const name of roomDefs) {
+    rooms[name] = await prisma.room.create({
+      data: { name, capacity: randInt(10, 20) },
+    });
+  }
+
+  // --- Class timetables (weekly). Chosen so no teacher or room clashes. ---
+  const DURATION = 90;
+  const scheduleDefs = [
+    { group: "mathMorning", weekday: 1, startTime: "09:00", room: "Room 1" },
+    { group: "mathMorning", weekday: 3, startTime: "09:00", room: "Room 1" },
+    { group: "mathEvening", weekday: 1, startTime: "17:00", room: "Room 1" },
+    { group: "mathEvening", weekday: 3, startTime: "17:00", room: "Room 1" },
+    { group: "englishA1", weekday: 2, startTime: "10:00", room: "Room 2" },
+    { group: "englishA1", weekday: 4, startTime: "10:00", room: "Room 2" },
+    { group: "physicsG1", weekday: 2, startTime: "14:00", room: "Room 3" },
+    { group: "physicsG1", weekday: 5, startTime: "14:00", room: "Room 3" },
+    { group: "csBeginners", weekday: 3, startTime: "14:00", room: "Room 2" },
+    { group: "csBeginners", weekday: 5, startTime: "16:00", room: "Room 2" },
+  ];
+  for (const s of scheduleDefs) {
+    await prisma.classSchedule.create({
+      data: {
+        groupId: groups[s.group].id,
+        weekday: s.weekday,
+        startTime: s.startTime,
+        durationMin: DURATION,
+        roomId: rooms[s.room].id,
+      },
+    });
+  }
+
+  // --- Lessons: 4 past + 4 upcoming weeks generated from the timetable, with
+  //     attendance recorded for the past ones (mostly present, some absent). ---
+  const studentsByGroup = new Map<string, string[]>();
+  for (const e of enrollments) {
+    const arr = studentsByGroup.get(e.groupKey) ?? [];
+    arr.push(e.studentId);
+    studentsByGroup.set(e.groupKey, arr);
+  }
+
+  const absenceReasons = ["Sick", "Family reasons", "Travelling", "No reason given"];
+  const weekBase = startOfWeek(now);
+  let lessonCount = 0;
+  let attendanceCount = 0;
+
+  for (const s of scheduleDefs) {
+    const g = groups[s.group];
+    const roomId = rooms[s.room].id;
+    const studentIds = studentsByGroup.get(s.group) ?? [];
+    for (let w = -4; w < 4; w++) {
+      const weekStart = addDays(weekBase, w * 7);
+      const day = addDays(weekStart, s.weekday - 1);
+      const startAt = atTime(day, s.startTime);
+      const endAt = new Date(startAt.getTime() + DURATION * 60_000);
+      const lesson = await prisma.lesson.create({
+        data: {
+          groupId: g.id,
+          startAt,
+          endAt,
+          roomId,
+          status: LESSON_STATUS.SCHEDULED,
+        },
+      });
+      lessonCount++;
+      if (startAt.getTime() < now.getTime() && studentIds.length) {
+        const rows = studentIds.map((studentId) => {
+          const absent = Math.random() < 0.15;
+          return {
+            lessonId: lesson.id,
+            studentId,
+            status: absent ? ATTENDANCE_STATUS.ABSENT : ATTENDANCE_STATUS.PRESENT,
+            reason: absent
+              ? absenceReasons[randInt(0, absenceReasons.length - 1)]
+              : null,
+          };
+        });
+        await prisma.attendance.createMany({ data: rows });
+        attendanceCount += rows.length;
+      }
+    }
+  }
+
   console.log(
-    `Seeded: ${subjectDefs.length} subjects, ${groupDefs.length} classes, 1 admin, ${teacherDefs.length} teachers, ${studentDefs.length} students, ${gradeRows.length} grades.`,
+    `Seeded: ${subjectDefs.length} subjects, ${groupDefs.length} classes, 1 admin, ${teacherDefs.length} teachers, ${studentDefs.length} students, ${gradeRows.length} grades, ${roomDefs.length} rooms, ${lessonCount} lessons, ${attendanceCount} attendance records.`,
   );
   console.log("\nDemo logins (password: password123):");
   console.log("  Admin   → +998901112201");

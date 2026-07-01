@@ -90,6 +90,65 @@ export const gradeUpdateSchema = gradeCreateSchema.extend({
   id: z.string().min(1),
 });
 
+/* --------------------- Scheduling & attendance --------------------- */
+
+export const roomSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1, "Room name is required"),
+  capacity: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v && v.trim().length > 0 ? Number(v) : null))
+    .pipe(z.number().int().min(1).nullable()),
+});
+
+// "HH:MM" 24-hour time.
+const timeSchema = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Enter a valid time (HH:MM)");
+
+export const scheduleSchema = z.object({
+  id: z.string().optional(),
+  groupId: z.string().min(1),
+  weekday: z.coerce.number().int().min(1).max(7),
+  startTime: timeSchema,
+  durationMin: z.coerce.number().int().min(15).max(480).default(90),
+  roomId: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v && v.length > 0 ? v : null)),
+});
+
+export const lessonSchema = z.object({
+  id: z.string().optional(),
+  groupId: z.string().min(1),
+  title: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v && v.trim().length > 0 ? v.trim() : null)),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date"),
+  startTime: timeSchema,
+  endTime: timeSchema,
+  roomId: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v && v.length > 0 ? v : null)),
+});
+
+export const attendanceItemSchema = z.object({
+  studentId: z.string().min(1),
+  status: z.enum(["PRESENT", "ABSENT"]),
+  reason: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v && v.trim().length > 0 ? v.trim() : null)),
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UserCreateInput = z.infer<typeof userCreateSchema>;
 export type GradeCreateInput = z.infer<typeof gradeCreateSchema>;

@@ -29,10 +29,11 @@ model User {
   // student may be enrolled in groups across at most 2 subjects, enforced in
   // the app layer (see src/app/actions/admin.ts). A teacher owns the groups
   // they teach via "GroupTeacher".
-  enrolledGroups Group[] @relation("GroupStudents")
-  groupsTaught   Group[] @relation("GroupTeacher")
-  gradesReceived Grade[] @relation("StudentGrades")
-  gradesGiven    Grade[] @relation("TeacherGrades")
+  enrolledGroups Group[]      @relation("GroupStudents")
+  groupsTaught   Group[]      @relation("GroupTeacher")
+  gradesReceived Grade[]      @relation("StudentGrades")
+  gradesGiven    Grade[]      @relation("TeacherGrades")
+  attendances    Attendance[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -65,6 +66,10 @@ model Group {
   // Enrolled students (implicit many-to-many).
   students User[] @relation("GroupStudents")
 
+  // Scheduling: a weekly timetable and the concrete lessons generated from it.
+  schedules ClassSchedule[]
+  lessons   Lesson[]
+
   createdAt DateTime @default(now())
 
   @@unique([subjectId, name])
@@ -92,4 +97,71 @@ model Grade {
 
   @@index([studentId, subjectId])
   @@index([date])
+}
+
+/// A physical room lessons can be held in.
+model Room {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  capacity  Int?
+  schedules ClassSchedule[]
+  lessons   Lesson[]
+  createdAt DateTime @default(now())
+}
+
+/// A recurring weekly timetable entry for a class (e.g. "Mon 15:00, Room 2").
+/// Concrete Lesson rows are generated from these.
+model ClassSchedule {
+  id          String  @id @default(cuid())
+  group       Group   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId     String
+  weekday     Int // 1 = Monday … 7 = Sunday
+  startTime   String // "HH:MM" (24h)
+  durationMin Int     @default(90)
+  room        Room?   @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  roomId      String?
+
+  createdAt DateTime @default(now())
+
+  @@index([groupId])
+  @@index([roomId])
+}
+
+/// A concrete lesson on the calendar. Generated from a ClassSchedule, but each
+/// one can be renamed, moved (startAt/endAt/room) or cancelled independently.
+model Lesson {
+  id        String  @id @default(cuid())
+  group     Group   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId   String
+  title     String? // optional label; defaults to the subject/class name in the UI
+  startAt   DateTime
+  endAt     DateTime
+  room      Room?   @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  roomId    String?
+  status    String  @default("SCHEDULED") // "SCHEDULED" | "CANCELLED"
+
+  attendances Attendance[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([groupId, startAt])
+  @@index([groupId, startAt])
+  @@index([startAt])
+}
+
+/// A student's attendance for a single lesson (present/absent + reason).
+model Attendance {
+  id        String  @id @default(cuid())
+  lesson    Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  lessonId  String
+  student   User    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String
+  status    String // "PRESENT" | "ABSENT"
+  reason    String?
+  markedAt  DateTime @default(now())
+
+  @@unique([lessonId, studentId])
+  @@index([studentId])
+  @@index([status])
 }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   BookOpen,
+  CalendarClock,
   GraduationCap,
   Pencil,
   Plus,
@@ -22,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { WEEKDAY_KEYS, WEEKDAYS } from "@/lib/constants";
 import {
   deleteGroup,
   deleteSubject,
@@ -30,16 +32,25 @@ import {
   saveSubject,
   unenrollStudent,
 } from "@/app/actions/admin";
+import { deleteSchedule, saveSchedule } from "@/app/actions/schedule";
 
 const MAX_SUBJECTS = 2;
 
 type Named = { id: string; name: string };
 export type StudentLite = { id: string; name: string; subjectIds: string[] };
+export type ScheduleLite = {
+  id: string;
+  weekday: number;
+  startTime: string;
+  durationMin: number;
+  room: Named | null;
+};
 export type GroupData = {
   id: string;
   name: string;
   teacher: Named | null;
   students: Named[];
+  schedules: ScheduleLite[];
 };
 export type SubjectData = {
   id: string;
@@ -52,16 +63,20 @@ export function SubjectsHub({
   subjects,
   teachers,
   students,
+  rooms,
   initialNew,
 }: {
   subjects: SubjectData[];
   teachers: Named[];
   students: StudentLite[];
+  rooms: Named[];
   initialNew?: boolean;
 }) {
   const t = useTranslations("admin");
   const tc = useTranslations("common");
   const tr = useTranslations("roles");
+  const ts = useTranslations("schedule");
+  const tw = useTranslations("weekdays");
   const te = useTranslations("errors");
   const router = useRouter();
 
@@ -79,6 +94,9 @@ export function SubjectsHub({
   const [manageGroupId, setManageGroupId] = useState<string | null>(null);
   const [manageSubjectId, setManageSubjectId] = useState<string>("");
   const [search, setSearch] = useState("");
+
+  // Timetable (schedule) modal for a class.
+  const [scheduleGroupId, setScheduleGroupId] = useState<string | null>(null);
 
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -150,6 +168,25 @@ export function SubjectsHub({
     else setError(res?.error);
   }
 
+  /* --------------------------- Timetable -------------------------- */
+  async function onScheduleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setPending(true);
+    setError(undefined);
+    const form = e.currentTarget;
+    const res = await saveSchedule({}, new FormData(form));
+    setPending(false);
+    if (res?.ok) {
+      form.reset();
+      router.refresh();
+    } else setError(res?.error);
+  }
+  async function onScheduleDelete(id: string) {
+    setError(undefined);
+    await deleteSchedule(id);
+    router.refresh();
+  }
+
   // The group currently being managed, read fresh from props each render.
   const manageGroup = useMemo<GroupData | null>(() => {
     if (!manageGroupId) return null;
@@ -159,6 +196,15 @@ export function SubjectsHub({
     }
     return null;
   }, [manageGroupId, subjects]);
+
+  const scheduleGroup = useMemo<GroupData | null>(() => {
+    if (!scheduleGroupId) return null;
+    for (const s of subjects) {
+      const g = s.groups.find((gr) => gr.id === scheduleGroupId);
+      if (g) return g;
+    }
+    return null;
+  }, [scheduleGroupId, subjects]);
 
   const filteredStudents = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -277,15 +323,41 @@ export function SubjectsHub({
                           ) : null}
                         </div>
 
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          className="mt-3 w-full"
-                          onClick={() => openManage(s.id, g.id)}
-                        >
-                          <UserPlus />
-                          {t("manageStudents")}
-                        </Button>
+                        {g.schedules.length ? (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {g.schedules.map((sc) => (
+                              <span
+                                key={sc.id}
+                                className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground"
+                              >
+                                <CalendarClock className="size-3" />
+                                {tw(WEEKDAY_KEYS[sc.weekday])} {sc.startTime}
+                              </span>
+                            ))}
+                          </div>
+                        ) : null}
+
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setError(undefined);
+                              setScheduleGroupId(g.id);
+                            }}
+                          >
+                            <CalendarClock />
+                            {ts("timetable")}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => openManage(s.id, g.id)}
+                          >
+                            <UserPlus />
+                            {t("manageStudents")}
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -453,6 +525,110 @@ export function SubjectsHub({
 
           <div className="flex justify-end pt-1">
             <Button variant="outline" onClick={() => setManageGroupId(null)}>
+              {tc("close")}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Class timetable modal */}
+      <Modal
+        open={scheduleGroup !== null}
+        onClose={() => setScheduleGroupId(null)}
+        title={ts("timetable")}
+        description={scheduleGroup?.name}
+      >
+        <div className="space-y-4">
+          {/* Existing timetable entries */}
+          {scheduleGroup && scheduleGroup.schedules.length > 0 ? (
+            <div className="space-y-1.5">
+              {scheduleGroup.schedules.map((sc) => (
+                <div
+                  key={sc.id}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm"
+                >
+                  <span className="font-medium">
+                    {tw(WEEKDAY_KEYS[sc.weekday])} · {sc.startTime} · {sc.durationMin}
+                    {ts("minShort")}
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {sc.room ? sc.room.name : ts("noRoom")}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onScheduleDelete(sc.id)}
+                      aria-label={tc("delete")}
+                      className="rounded p-1 text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">{ts("noTimetable")}</p>
+          )}
+
+          {/* Add a timetable entry */}
+          {scheduleGroup ? (
+            <form
+              onSubmit={onScheduleSubmit}
+              className="space-y-3 rounded-lg border border-dashed border-border p-3"
+            >
+              <input type="hidden" name="groupId" value={scheduleGroup.id} />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="sc-weekday">{ts("weekday")}</Label>
+                  <Select id="sc-weekday" name="weekday" defaultValue="1">
+                    {WEEKDAYS.map((wd) => (
+                      <option key={wd} value={wd}>
+                        {tw(WEEKDAY_KEYS[wd])}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="sc-start">{ts("startTime")}</Label>
+                  <Input id="sc-start" name="startTime" type="time" defaultValue="15:00" required />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="sc-duration">{ts("duration")}</Label>
+                  <Input
+                    id="sc-duration"
+                    name="durationMin"
+                    type="number"
+                    min={15}
+                    step={15}
+                    defaultValue={90}
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="sc-room">{ts("room")}</Label>
+                  <Select id="sc-room" name="roomId" defaultValue="">
+                    <option value="">{ts("noRoom")}</option>
+                    {rooms.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
+              {error ? <FormError text={te(error)} /> : null}
+              <Button type="submit" size="sm" className="w-full" disabled={pending}>
+                <Plus />
+                {pending ? tc("saving") : ts("addTimetableEntry")}
+              </Button>
+            </form>
+          ) : null}
+
+          <p className="text-xs text-muted-foreground">{ts("generateHint")}</p>
+
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => setScheduleGroupId(null)}>
               {tc("close")}
             </Button>
           </div>
