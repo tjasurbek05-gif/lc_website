@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createSession, destroySession, verifyPassword } from "@/lib/auth";
 import { dashboardPathForRole, type Role } from "@/lib/constants";
-import { loginSchema } from "@/lib/validations";
+import { loginSchema, normalizePhone } from "@/lib/validations";
 
 export type LoginState = { error?: string };
 
@@ -13,13 +13,13 @@ export async function login(
   formData: FormData,
 ): Promise<LoginState> {
   const parsed = loginSchema.safeParse({
-    email: formData.get("email"),
+    phone: formData.get("phone"),
     password: formData.get("password"),
   });
   if (!parsed.success) return { error: "invalidCredentials" };
 
-  const email = parsed.data.email.toLowerCase().trim();
-  const user = await prisma.user.findUnique({ where: { email } });
+  const phone = normalizePhone(parsed.data.phone);
+  const user = await prisma.user.findUnique({ where: { phone } });
   if (!user || !user.active) return { error: "invalidCredentials" };
 
   const ok = await verifyPassword(parsed.data.password, user.passwordHash);
@@ -29,7 +29,7 @@ export async function login(
     userId: user.id,
     role: user.role as Role,
     name: user.name,
-    email: user.email,
+    phone: user.phone,
   });
 
   redirect(dashboardPathForRole(user.role));

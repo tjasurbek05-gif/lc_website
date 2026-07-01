@@ -15,33 +15,22 @@ export default async function TeacherDashboard() {
   const session = await requireRole(ROLES.TEACHER);
   const t = await getTranslations("teacher");
 
-  const classes = await prisma.teacherSubject.findMany({
+  // A teacher's "classes" are the groups they own. Each group carries one subject.
+  const classes = await prisma.group.findMany({
     where: { teacherId: session.userId },
     include: {
       subject: { select: { id: true, name: true } },
-      group: {
-        select: { id: true, name: true, _count: { select: { students: true } } },
-      },
+      students: { select: { id: true } },
     },
   });
   classes.sort((a, b) =>
-    `${a.subject.name}${a.group.name}`.localeCompare(`${b.subject.name}${b.group.name}`),
+    `${a.subject.name}${a.name}`.localeCompare(`${b.subject.name}${b.name}`),
   );
 
-  const subjectIds = [...new Set(classes.map((c) => c.subjectId))];
-  const groupIds = [...new Set(classes.map((c) => c.groupId))];
   const grades = classes.length
     ? await prisma.grade.findMany({
-        where: {
-          subjectId: { in: subjectIds },
-          student: { groupId: { in: groupIds } },
-        },
-        select: {
-          subjectId: true,
-          value: true,
-          maxValue: true,
-          student: { select: { groupId: true } },
-        },
+        where: { teacherId: session.userId },
+        select: { subjectId: true, studentId: true, value: true, maxValue: true },
       })
     : [];
 
@@ -54,13 +43,13 @@ export default async function TeacherDashboard() {
   });
   const avgPerformance = grades.length ? averagePercent(grades.map(toLike)) : 0;
 
-  const distinctGroups = new Map<string, number>();
-  for (const c of classes) distinctGroups.set(c.groupId, c.group._count.students);
-  const totalStudents = [...distinctGroups.values()].reduce((a, b) => a + b, 0);
+  const subjectIds = new Set(classes.map((c) => c.subjectId));
+  const allStudentIds = new Set(classes.flatMap((c) => c.students.map((s) => s.id)));
+  const totalStudents = allStudentIds.size;
 
-  function classAverage(subjectId: string, groupId: string) {
+  function classAverage(subjectId: string, studentIds: Set<string>) {
     const gs = grades.filter(
-      (g) => g.subjectId === subjectId && g.student.groupId === groupId,
+      (g) => g.subjectId === subjectId && studentIds.has(g.studentId),
     );
     return gs.length ? averagePercent(gs.map(toLike)) : null;
   }
@@ -77,7 +66,7 @@ export default async function TeacherDashboard() {
         <StatCard label={t("studentsCount")} value={totalStudents} icon={<Users />} />
         <StatCard
           label={t("subjectsCount")}
-          value={subjectIds.length}
+          value={subjectIds.size}
           icon={<BookOpen />}
         />
         <StatCard
@@ -94,7 +83,8 @@ export default async function TeacherDashboard() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {classes.map((c) => {
-            const avg = classAverage(c.subjectId, c.groupId);
+            const studentIds = new Set(c.students.map((s) => s.id));
+            const avg = classAverage(c.subjectId, studentIds);
             return (
               <Link key={c.id} href={`/teacher/grades?class=${c.id}`}>
                 <Card className="group h-full transition-colors hover:border-primary/40">
@@ -102,14 +92,14 @@ export default async function TeacherDashboard() {
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <p className="font-semibold">{c.subject.name}</p>
-                        <p className="text-sm text-muted-foreground">{c.group.name}</p>
+                        <p className="text-sm text-muted-foreground">{c.name}</p>
                       </div>
                       <ChevronRight className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
                     </div>
                     <div className="mt-6 flex items-center justify-between">
                       <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
                         <Users className="size-4" />
-                        {c.group._count.students}
+                        {c.students.length}
                       </span>
                       {avg == null ? (
                         <span className="text-sm text-muted-foreground">—</span>

@@ -6,10 +6,10 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   BookOpen,
+  CalendarDays,
   ClipboardList,
   GraduationCap,
   LayoutDashboard,
-  Layers,
   Menu,
   Users,
 } from "lucide-react";
@@ -26,16 +26,18 @@ type NavItem = { href: string; key: string; icon: IconType };
 const NAV: Record<Role, NavItem[]> = {
   ADMIN: [
     { href: "/admin", key: "dashboard", icon: LayoutDashboard },
-    { href: "/admin/users", key: "users", icon: Users },
-    { href: "/admin/groups", key: "groups", icon: Layers },
+    { href: "/admin/users", key: "people", icon: Users },
     { href: "/admin/subjects", key: "subjects", icon: BookOpen },
+    { href: "/admin/schedule", key: "schedule", icon: CalendarDays },
   ],
   TEACHER: [
     { href: "/teacher", key: "dashboard", icon: LayoutDashboard },
+    { href: "/teacher/schedule", key: "schedule", icon: CalendarDays },
     { href: "/teacher/grades", key: "grades", icon: ClipboardList },
   ],
   STUDENT: [
     { href: "/student", key: "dashboard", icon: LayoutDashboard },
+    { href: "/student/calendar", key: "calendar", icon: CalendarDays },
     { href: "/student/grades", key: "myGrades", icon: GraduationCap },
   ],
 };
@@ -46,7 +48,7 @@ export function AppShell({
   children,
 }: {
   role: Role;
-  user: { name: string; email: string };
+  user: { name: string; phone: string };
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -75,9 +77,9 @@ export function AppShell({
               href={item.href}
               onClick={() => setMobileOpen(false)}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
                 active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  ? "bg-brand-gradient text-white shadow-md shadow-black/20"
                   : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
               )}
             >
@@ -129,7 +131,7 @@ export function AppShell({
           <div className="ml-auto flex items-center gap-2">
             <LanguageSwitcher />
             <ThemeToggle />
-            <UserMenu name={user.name} email={user.email} roleLabel={tRoles(role)} />
+            <UserMenu name={user.name} phone={user.phone} roleLabel={tRoles(role)} />
           </div>
         </header>
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>

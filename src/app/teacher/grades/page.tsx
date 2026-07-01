@@ -22,15 +22,13 @@ export default async function TeacherGradesPage({
   const tNav = await getTranslations("nav");
   const locale = await getLocale();
 
-  const classes = await prisma.teacherSubject.findMany({
+  // Each class is a group the teacher owns; it carries exactly one subject.
+  const classes = await prisma.group.findMany({
     where: { teacherId: session.userId },
-    include: {
-      subject: { select: { id: true, name: true } },
-      group: { select: { id: true, name: true } },
-    },
+    include: { subject: { select: { id: true, name: true } } },
   });
   classes.sort((a, b) =>
-    `${a.subject.name}${a.group.name}`.localeCompare(`${b.subject.name}${b.group.name}`),
+    `${a.subject.name}${a.name}`.localeCompare(`${b.subject.name}${b.name}`),
   );
 
   if (classes.length === 0) {
@@ -45,7 +43,7 @@ export default async function TeacherGradesPage({
   const selected = classes.find((c) => c.id === sp.class) ?? classes[0];
 
   const students = await prisma.user.findMany({
-    where: { role: ROLES.STUDENT, groupId: selected.groupId },
+    where: { role: ROLES.STUDENT, enrolledGroups: { some: { id: selected.id } } },
     select: {
       id: true,
       name: true,
@@ -79,7 +77,10 @@ export default async function TeacherGradesPage({
   const classAvg = allGrades.length ? averagePercent(allGrades) : null;
 
   const recentRaw = await prisma.grade.findMany({
-    where: { subjectId: selected.subjectId, student: { groupId: selected.groupId } },
+    where: {
+      subjectId: selected.subjectId,
+      student: { enrolledGroups: { some: { id: selected.id } } },
+    },
     include: { student: { select: { id: true, name: true } } },
     orderBy: { date: "desc" },
     take: 15,
@@ -100,7 +101,7 @@ export default async function TeacherGradesPage({
     <div>
       <PageHeader
         title={tNav("grades")}
-        description={`${selected.subject.name} · ${selected.group.name}`}
+        description={`${selected.subject.name} · ${selected.name}`}
         action={
           classAvg == null ? undefined : (
             <div className="flex items-center gap-2 text-sm">
@@ -126,7 +127,7 @@ export default async function TeacherGradesPage({
                   : "border-border bg-card hover:bg-muted",
               )}
             >
-              {c.subject.name} · {c.group.name}
+              {c.subject.name} · {c.name}
             </Link>
           );
         })}

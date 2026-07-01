@@ -8,9 +8,9 @@ import { Label } from "@/components/ui/label";
 import { login, type LoginState } from "@/app/actions/auth";
 
 const DEMO_ACCOUNTS = [
-  { roleKey: "ADMIN", email: "admin@demo.com" },
-  { roleKey: "TEACHER", email: "teacher@demo.com" },
-  { roleKey: "STUDENT", email: "student@demo.com" },
+  { roleKey: "ADMIN", phone: "+998901112201" },
+  { roleKey: "TEACHER", phone: "+998901112202" },
+  { roleKey: "STUDENT", phone: "+998901112203" },
 ];
 
 export function LoginForm() {
@@ -21,23 +21,24 @@ export function LoginForm() {
     login,
     {},
   );
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
 
   return (
     <div>
       <form action={formAction} className="space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor="email">{tc("email")}</Label>
+          <Label htmlFor="phone">{tc("phone")}</Label>
           <Input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
+            id="phone"
+            name="phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="username"
             required
-            placeholder={t("emailPlaceholder")}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            placeholder={tc("phonePlaceholder")}
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
           />
         </div>
         <div className="space-y-1.5">
@@ -73,10 +74,10 @@ export function LoginForm() {
         <div className="mt-4 grid grid-cols-3 gap-2">
           {DEMO_ACCOUNTS.map((d) => (
             <button
-              key={d.email}
+              key={d.phone}
               type="button"
               onClick={() => {
-                setEmail(d.email);
+                setPhone(d.phone);
                 setPassword("password123");
               }}
               className="rounded-lg border border-border bg-card px-2 py-2 text-xs font-medium transition-colors hover:border-primary/40 hover:bg-muted"

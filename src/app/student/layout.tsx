@@ -9,7 +9,7 @@ export default async function StudentLayout({
 }) {
   const session = await requireRole(ROLES.STUDENT);
   return (
-    <AppShell role={ROLES.STUDENT} user={{ name: session.name, email: session.email }}>
+    <AppShell role={ROLES.STUDENT} user={{ name: session.name, phone: session.phone }}>
       {children}
     </AppShell>
   );

@@ -8,17 +8,21 @@ import { gradeCreateSchema, gradeUpdateSchema } from "@/lib/validations";
 
 export type GradeActionState = { error?: string; ok?: boolean };
 
-/** A teacher may grade a student only in a subject they teach to that student's group. */
+/**
+ * A teacher may grade a student only in a subject they teach to that student:
+ * i.e. the student is enrolled in a class (group) of that subject which the
+ * teacher owns.
+ */
 async function teacherTeaches(teacherId: string, subjectId: string, studentId: string) {
-  const student = await prisma.user.findUnique({
-    where: { id: studentId },
-    select: { groupId: true },
+  const group = await prisma.group.findFirst({
+    where: {
+      teacherId,
+      subjectId,
+      students: { some: { id: studentId } },
+    },
+    select: { id: true },
   });
-  if (!student?.groupId) return false;
-  const assignment = await prisma.teacherSubject.findFirst({
-    where: { teacherId, subjectId, groupId: student.groupId },
-  });
-  return Boolean(assignment);
+  return Boolean(group);
 }
 
 export async function createGrade(

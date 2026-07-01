@@ -9,7 +9,7 @@ export default async function AdminLayout({
 }) {
   const session = await requireRole(ROLES.ADMIN);
   return (
-    <AppShell role={ROLES.ADMIN} user={{ name: session.name, email: session.email }}>
+    <AppShell role={ROLES.ADMIN} user={{ name: session.name, phone: session.phone }}>
       {children}
     </AppShell>
   );

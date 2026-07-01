@@ -39,7 +39,7 @@ export default async function StudentDashboard() {
   const [me, grades] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.userId },
-      select: { groupId: true },
+      select: { enrolledGroups: { select: { id: true, subjectId: true } } },
     }),
     prisma.grade.findMany({
       where: { studentId: session.userId },
@@ -70,12 +70,16 @@ export default async function StudentDashboard() {
   }));
   const recent = grades.slice(0, 8);
 
-  // Rank within the student's group.
+  // Number of subjects the student is enrolled in (independent of grades).
+  const enrolledSubjects = new Set((me?.enrolledGroups ?? []).map((g) => g.subjectId));
+
+  // Rank among the students who share any of this student's classes.
   let rank: number | null = null;
   let groupSize = 0;
-  if (me?.groupId) {
+  const myGroupIds = (me?.enrolledGroups ?? []).map((g) => g.id);
+  if (myGroupIds.length) {
     const groupGrades = await prisma.grade.findMany({
-      where: { student: { groupId: me.groupId } },
+      where: { student: { enrolledGroups: { some: { id: { in: myGroupIds } } } } },
       select: { studentId: true, value: true, maxValue: true },
     });
     const byStudent = new Map<string, number[]>();
@@ -111,7 +115,7 @@ export default async function StudentDashboard() {
         <StatCard label={t("gpa")} value={gpa.toFixed(2)} icon={<GraduationCap />} />
         <StatCard
           label={t("subjectsCount")}
-          value={subjectSummary.length}
+          value={enrolledSubjects.size || subjectSummary.length}
           icon={<BookOpen />}
         />
         {rank ? (

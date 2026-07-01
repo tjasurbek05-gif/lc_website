@@ -10,7 +10,7 @@ export type SessionPayload = {
   userId: string;
   role: Role;
   name: string;
-  email: string;
+  phone: string;
 };
 
 const secret = process.env.AUTH_SECRET ?? "dev-insecure-secret-change-me";
@@ -32,13 +32,13 @@ export async function verifySession(token: string | undefined): Promise<SessionP
       typeof payload.userId === "string" &&
       typeof payload.role === "string" &&
       typeof payload.name === "string" &&
-      typeof payload.email === "string"
+      typeof payload.phone === "string"
     ) {
       return {
         userId: payload.userId,
         role: payload.role as Role,
         name: payload.name,
-        email: payload.email,
+        phone: payload.phone,
       };
     }
     return null;

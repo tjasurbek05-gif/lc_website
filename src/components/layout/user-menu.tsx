@@ -9,11 +9,11 @@ import { logout } from "@/app/actions/auth";
 
 export function UserMenu({
   name,
-  email,
+  phone,
   roleLabel,
 }: {
   name: string;
-  email: string;
+  phone: string;
   roleLabel: string;
 }) {
   const t = useTranslations("auth");
@@ -35,7 +35,7 @@ export function UserMenu({
     >
       <div className="px-3 py-2">
         <p className="text-sm font-medium">{name}</p>
-        <p className="truncate text-xs text-muted-foreground">{email}</p>
+        <p className="truncate text-xs text-muted-foreground">{phone}</p>
       </div>
       <div className="my-1 h-px bg-border" />
       <DropdownItem
