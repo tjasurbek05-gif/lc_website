@@ -73,6 +73,11 @@
     "sat": "Sat",
     "sun": "Sun"
   },
+  "lessonTypes": {
+    "LESSON": "Lesson",
+    "EXAM": "Exam",
+    "MINI_EXAM": "Mini-exam"
+  },
   "schedule": {
     "title": "Schedule",
     "adminHint": "Manage rooms and see weekly availability. Set a class's timetable from the Subjects page.",
@@ -97,6 +102,10 @@
     "noRoom": "No room",
     "noTimetable": "No timetable yet. Add a weekly slot below.",
     "weekday": "Day",
+    "days": "Days",
+    "patternOdd": "Mon · Wed · Fri",
+    "patternEven": "Tue · Thu · Sat",
+    "lessonType": "Type",
     "startTime": "Start",
     "endTime": "End",
     "duration": "Duration (min)",

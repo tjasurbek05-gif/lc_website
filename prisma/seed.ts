@@ -5,6 +5,8 @@ import {
   ATTENDANCE_STATUS,
   GRADE_TYPES,
   LESSON_STATUS,
+  LESSON_TYPES,
+  PATTERN_WEEKDAYS,
   ROLES,
 } from "@/lib/constants";
 import { addDays, startOfWeek } from "@/lib/utils";
@@ -170,25 +172,21 @@ async function main() {
     });
   }
 
-  // --- Class timetables (weekly). Chosen so no teacher or room clashes. ---
+  // --- Class timetables. Each class recurs on an ODD (Mon/Wed/Fri) or EVEN
+  //     (Tue/Thu/Sat) pattern. Chosen so no teacher or room clashes. ---
   const DURATION = 90;
   const scheduleDefs = [
-    { group: "mathMorning", weekday: 1, startTime: "09:00", room: "Room 1" },
-    { group: "mathMorning", weekday: 3, startTime: "09:00", room: "Room 1" },
-    { group: "mathEvening", weekday: 1, startTime: "17:00", room: "Room 1" },
-    { group: "mathEvening", weekday: 3, startTime: "17:00", room: "Room 1" },
-    { group: "englishA1", weekday: 2, startTime: "10:00", room: "Room 2" },
-    { group: "englishA1", weekday: 4, startTime: "10:00", room: "Room 2" },
-    { group: "physicsG1", weekday: 2, startTime: "14:00", room: "Room 3" },
-    { group: "physicsG1", weekday: 5, startTime: "14:00", room: "Room 3" },
-    { group: "csBeginners", weekday: 3, startTime: "14:00", room: "Room 2" },
-    { group: "csBeginners", weekday: 5, startTime: "16:00", room: "Room 2" },
+    { group: "mathMorning", pattern: "ODD", startTime: "09:00", room: "Room 1" },
+    { group: "mathEvening", pattern: "ODD", startTime: "17:00", room: "Room 1" },
+    { group: "englishA1", pattern: "EVEN", startTime: "10:00", room: "Room 2" },
+    { group: "physicsG1", pattern: "EVEN", startTime: "14:00", room: "Room 3" },
+    { group: "csBeginners", pattern: "ODD", startTime: "14:00", room: "Room 2" },
   ];
   for (const s of scheduleDefs) {
     await prisma.classSchedule.create({
       data: {
         groupId: groups[s.group].id,
-        weekday: s.weekday,
+        pattern: s.pattern,
         startTime: s.startTime,
         durationMin: DURATION,
         roomId: rooms[s.room].id,
@@ -210,41 +208,71 @@ async function main() {
   let lessonCount = 0;
   let attendanceCount = 0;
 
+  // Attendance is only recorded for a past lesson if it has already ended.
+  // Newer past lessons are left "unmarked" so the teacher calendar shows red.
+  async function addAttendance(lessonId: string, studentIds: string[]) {
+    if (!studentIds.length) return;
+    const rows = studentIds.map((studentId) => {
+      const absent = Math.random() < 0.15;
+      return {
+        lessonId,
+        studentId,
+        status: absent ? ATTENDANCE_STATUS.ABSENT : ATTENDANCE_STATUS.PRESENT,
+        reason: absent ? absenceReasons[randInt(0, absenceReasons.length - 1)] : null,
+      };
+    });
+    await prisma.attendance.createMany({ data: rows });
+    attendanceCount += rows.length;
+  }
+
   for (const s of scheduleDefs) {
     const g = groups[s.group];
     const roomId = rooms[s.room].id;
     const studentIds = studentsByGroup.get(s.group) ?? [];
     for (let w = -4; w < 4; w++) {
       const weekStart = addDays(weekBase, w * 7);
-      const day = addDays(weekStart, s.weekday - 1);
-      const startAt = atTime(day, s.startTime);
-      const endAt = new Date(startAt.getTime() + DURATION * 60_000);
-      const lesson = await prisma.lesson.create({
-        data: {
-          groupId: g.id,
-          startAt,
-          endAt,
-          roomId,
-          status: LESSON_STATUS.SCHEDULED,
-        },
-      });
-      lessonCount++;
-      if (startAt.getTime() < now.getTime() && studentIds.length) {
-        const rows = studentIds.map((studentId) => {
-          const absent = Math.random() < 0.15;
-          return {
-            lessonId: lesson.id,
-            studentId,
-            status: absent ? ATTENDANCE_STATUS.ABSENT : ATTENDANCE_STATUS.PRESENT,
-            reason: absent
-              ? absenceReasons[randInt(0, absenceReasons.length - 1)]
-              : null,
-          };
+      for (const weekday of PATTERN_WEEKDAYS[s.pattern] ?? []) {
+        const day = addDays(weekStart, weekday - 1);
+        const startAt = atTime(day, s.startTime);
+        const endAt = new Date(startAt.getTime() + DURATION * 60_000);
+        const lesson = await prisma.lesson.create({
+          data: {
+            groupId: g.id,
+            startAt,
+            endAt,
+            roomId,
+            status: LESSON_STATUS.SCHEDULED,
+            type: LESSON_TYPES.LESSON,
+          },
         });
-        await prisma.attendance.createMany({ data: rows });
-        attendanceCount += rows.length;
+        lessonCount++;
+        // Mark attendance only for lessons that finished before "last week",
+        // leaving the most recent ones unmarked (red on the teacher side).
+        if (endAt.getTime() < now.getTime() - 6 * 24 * 3600_000) {
+          await addAttendance(lesson.id, studentIds);
+        }
       }
     }
+  }
+
+  // A one-off Sunday EXAM for the demo Math morning group (Sundays are normally
+  // off — exams are added manually as individual lessons).
+  {
+    const g = groups.mathMorning;
+    const lastSunday = atTime(addDays(weekBase, 6 - 7), "10:00"); // previous Sunday
+    const exam = await prisma.lesson.create({
+      data: {
+        groupId: g.id,
+        title: "Midterm exam",
+        startAt: lastSunday,
+        endAt: new Date(lastSunday.getTime() + 120 * 60_000),
+        roomId: rooms["Room 1"].id,
+        status: LESSON_STATUS.SCHEDULED,
+        type: LESSON_TYPES.EXAM,
+      },
+    });
+    lessonCount++;
+    await addAttendance(exam.id, studentsByGroup.get("mathMorning") ?? []);
   }
 
   console.log(

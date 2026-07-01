@@ -25,7 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { WEEKDAY_KEYS, WEEKDAYS } from "@/lib/constants";
+import { ALL_LESSON_TYPES, LESSON_TYPES, WEEKDAY_KEYS, WEEKDAYS } from "@/lib/constants";
 import {
   deleteLesson,
   markAttendance,
@@ -39,6 +39,7 @@ export type CalLesson = {
   groupId: string;
   groupLabel: string;
   title: string | null;
+  type: string;
   status: string;
   dayIndex: number;
   dateInput: string;
@@ -47,6 +48,7 @@ export type CalLesson = {
   roomId: string | null;
   roomName: string | null;
   isPast: boolean;
+  marked: boolean;
   total: number;
   present: number;
   absent: number;
@@ -75,6 +77,7 @@ export function TeacherCalendar({
   const t = useTranslations("schedule");
   const tc = useTranslations("common");
   const tw = useTranslations("weekdays");
+  const tlt = useTranslations("lessonTypes");
   const te = useTranslations("errors");
   const pathname = usePathname();
   const router = useRouter();
@@ -206,19 +209,31 @@ export function TeacherCalendar({
                 <div className="space-y-2">
                   {dayLessons.map((l) => {
                     const cancelled = l.status === lessonStatusCancelled;
+                    // Green once attendance is marked; red when a past lesson
+                    // still needs marking; neutral for upcoming lessons.
+                    const needsMarking = !cancelled && !l.marked && l.isPast;
+                    const tone = cancelled
+                      ? "opacity-60"
+                      : l.marked
+                        ? "border-l-4 border-l-success"
+                        : needsMarking
+                          ? "border-l-4 border-l-destructive"
+                          : "";
                     return (
                       <div
                         key={l.id}
-                        className={cn(
-                          "rounded-lg border border-border p-3",
-                          cancelled && "opacity-60",
-                        )}
+                        className={cn("rounded-lg border border-border p-3", tone)}
                       >
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p className={cn("font-medium", cancelled && "line-through")}>
-                              {l.title || l.groupLabel}
-                            </p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className={cn("font-medium", cancelled && "line-through")}>
+                                {l.title || l.groupLabel}
+                              </p>
+                              {l.type !== LESSON_TYPES.LESSON ? (
+                                <Badge variant="warning">{tlt(l.type)}</Badge>
+                              ) : null}
+                            </div>
                             <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                               <span className="inline-flex items-center gap-1">
                                 <CalendarDays className="size-3.5" />
@@ -264,8 +279,8 @@ export function TeacherCalendar({
 
                         {!cancelled ? (
                           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 text-xs">
-                              {l.present + l.absent > 0 ? (
+                            <div className="flex flex-wrap items-center gap-2 text-xs">
+                              {l.marked ? (
                                 <>
                                   <Badge variant="success">
                                     {t("presentCount", { count: l.present })}
@@ -276,9 +291,11 @@ export function TeacherCalendar({
                                     </Badge>
                                   ) : null}
                                 </>
+                              ) : needsMarking ? (
+                                <Badge variant="danger">{t("notMarked")}</Badge>
                               ) : (
                                 <span className="text-muted-foreground">
-                                  {l.isPast ? t("notMarked") : t("upcoming")}
+                                  {t("upcoming")}
                                 </span>
                               )}
                             </div>
@@ -348,6 +365,16 @@ export function TeacherCalendar({
               defaultValue={editing?.title ?? ""}
               placeholder={t("lessonTitlePlaceholder")}
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="l-type">{t("lessonType")}</Label>
+            <Select id="l-type" name="type" defaultValue={editing?.type ?? "LESSON"}>
+              {ALL_LESSON_TYPES.map((ty) => (
+                <option key={ty} value={ty}>
+                  {tlt(ty)}
+                </option>
+              ))}
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="l-date">{tc("date")}</Label>

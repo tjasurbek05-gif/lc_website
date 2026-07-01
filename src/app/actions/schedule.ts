@@ -3,7 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole, getSession } from "@/lib/auth";
-import { ATTENDANCE_STATUS, LESSON_STATUS, ROLES } from "@/lib/constants";
+import {
+  ATTENDANCE_STATUS,
+  LESSON_STATUS,
+  PATTERN_WEEKDAYS,
+  ROLES,
+} from "@/lib/constants";
 import { addDays, startOfWeek } from "@/lib/utils";
 import {
   attendanceItemSchema,
@@ -89,7 +94,7 @@ export async function saveSchedule(
   const parsed = scheduleSchema.safeParse({
     id: (formData.get("id") as string) || undefined,
     groupId: formData.get("groupId"),
-    weekday: formData.get("weekday"),
+    pattern: formData.get("pattern"),
     startTime: formData.get("startTime"),
     durationMin: formData.get("durationMin") || 90,
     roomId: (formData.get("roomId") as string) || null,
@@ -105,17 +110,21 @@ export async function saveSchedule(
 
   const start = timeToMin(d.startTime);
   const end = start + d.durationMin;
+  const days = new Set(PATTERN_WEEKDAYS[d.pattern] ?? []);
 
-  // Other timetable entries on the same weekday, to check for overlaps.
+  // Two timetable entries clash when they share a weekday, their times overlap,
+  // and they use the same teacher or room. ODD and EVEN patterns never share a
+  // day, so only same-pattern entries can conflict.
   const others = await prisma.classSchedule.findMany({
-    where: { weekday: d.weekday, id: d.id ? { not: d.id } : undefined },
+    where: { id: d.id ? { not: d.id } : undefined },
     include: { group: { select: { teacherId: true } } },
   });
   for (const o of others) {
+    const shareDay = (PATTERN_WEEKDAYS[o.pattern] ?? []).some((w) => days.has(w));
+    if (!shareDay) continue;
     const oStart = timeToMin(o.startTime);
     const oEnd = oStart + o.durationMin;
-    const overlaps = start < oEnd && oStart < end;
-    if (!overlaps) continue;
+    if (!(start < oEnd && oStart < end)) continue;
     if (group.teacherId && o.group.teacherId === group.teacherId) {
       return { error: "teacherBusy" };
     }
@@ -128,7 +137,7 @@ export async function saveSchedule(
     await prisma.classSchedule.update({
       where: { id: d.id },
       data: {
-        weekday: d.weekday,
+        pattern: d.pattern,
         startTime: d.startTime,
         durationMin: d.durationMin,
         roomId: d.roomId,
@@ -138,7 +147,7 @@ export async function saveSchedule(
     await prisma.classSchedule.create({
       data: {
         groupId: d.groupId,
-        weekday: d.weekday,
+        pattern: d.pattern,
         startTime: d.startTime,
         durationMin: d.durationMin,
         roomId: d.roomId,
@@ -187,28 +196,30 @@ async function generateUpcomingLessons(groupId: string): Promise<number> {
   for (let w = 0; w < GENERATE_WEEKS; w++) {
     const weekStart = addDays(base, w * 7);
     for (const s of schedules) {
-      const day = addDays(weekStart, s.weekday - 1); // weekday 1=Mon → +0
       const [hh, mm] = s.startTime.split(":").map(Number);
-      const startAt = new Date(
-        day.getFullYear(),
-        day.getMonth(),
-        day.getDate(),
-        hh,
-        mm,
-        0,
-        0,
-      );
-      if (startAt.getTime() < now.getTime()) continue; // upcoming only
-      if (seen.has(startAt.getTime())) continue;
-      seen.add(startAt.getTime());
-      const endAt = new Date(startAt.getTime() + s.durationMin * 60_000);
-      toCreate.push({
-        groupId,
-        startAt,
-        endAt,
-        roomId: s.roomId,
-        status: LESSON_STATUS.SCHEDULED,
-      });
+      for (const weekday of PATTERN_WEEKDAYS[s.pattern] ?? []) {
+        const day = addDays(weekStart, weekday - 1); // weekday 1=Mon → +0
+        const startAt = new Date(
+          day.getFullYear(),
+          day.getMonth(),
+          day.getDate(),
+          hh,
+          mm,
+          0,
+          0,
+        );
+        if (startAt.getTime() < now.getTime()) continue; // upcoming only
+        if (seen.has(startAt.getTime())) continue;
+        seen.add(startAt.getTime());
+        const endAt = new Date(startAt.getTime() + s.durationMin * 60_000);
+        toCreate.push({
+          groupId,
+          startAt,
+          endAt,
+          roomId: s.roomId,
+          status: LESSON_STATUS.SCHEDULED,
+        });
+      }
     }
   }
 
@@ -250,6 +261,7 @@ export async function saveLesson(
     id: (formData.get("id") as string) || undefined,
     groupId: formData.get("groupId"),
     title: (formData.get("title") as string) || null,
+    type: formData.get("type") || "LESSON",
     date: formData.get("date"),
     startTime: formData.get("startTime"),
     endTime: formData.get("endTime"),
@@ -268,13 +280,14 @@ export async function saveLesson(
     if (d.id) {
       await prisma.lesson.update({
         where: { id: d.id },
-        data: { title: d.title, startAt, endAt, roomId: d.roomId },
+        data: { title: d.title, type: d.type, startAt, endAt, roomId: d.roomId },
       });
     } else {
       await prisma.lesson.create({
         data: {
           groupId: d.groupId,
           title: d.title,
+          type: d.type,
           startAt,
           endAt,
           roomId: d.roomId,

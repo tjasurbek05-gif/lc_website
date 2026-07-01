@@ -21,7 +21,7 @@ export default async function AdminSubjectsPage({
             teacher: { select: { id: true, name: true } },
             students: { select: { id: true, name: true }, orderBy: { name: "asc" } },
             schedules: {
-              orderBy: [{ weekday: "asc" }, { startTime: "asc" }],
+              orderBy: [{ pattern: "asc" }, { startTime: "asc" }],
               include: { room: { select: { id: true, name: true } } },
             },
           },
@@ -56,7 +56,7 @@ export default async function AdminSubjectsPage({
       students: g.students,
       schedules: g.schedules.map((sc) => ({
         id: sc.id,
-        weekday: sc.weekday,
+        pattern: sc.pattern,
         startTime: sc.startTime,
         durationMin: sc.durationMin,
         room: sc.room,

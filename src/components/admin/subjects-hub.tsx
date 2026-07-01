@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { WEEKDAY_KEYS, WEEKDAYS } from "@/lib/constants";
+import { ALL_DAY_PATTERNS } from "@/lib/constants";
 import {
   deleteGroup,
   deleteSubject,
@@ -40,7 +40,7 @@ type Named = { id: string; name: string };
 export type StudentLite = { id: string; name: string; subjectIds: string[] };
 export type ScheduleLite = {
   id: string;
-  weekday: number;
+  pattern: string;
   startTime: string;
   durationMin: number;
   room: Named | null;
@@ -76,8 +76,8 @@ export function SubjectsHub({
   const tc = useTranslations("common");
   const tr = useTranslations("roles");
   const ts = useTranslations("schedule");
-  const tw = useTranslations("weekdays");
   const te = useTranslations("errors");
+  const patternLabel = (p: string) => ts(p === "ODD" ? "patternOdd" : "patternEven");
   const router = useRouter();
 
   // Subject create/edit modal. Opens on mount when arriving from the dashboard
@@ -331,7 +331,7 @@ export function SubjectsHub({
                                 className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground"
                               >
                                 <CalendarClock className="size-3" />
-                                {tw(WEEKDAY_KEYS[sc.weekday])} {sc.startTime}
+                                {patternLabel(sc.pattern)} · {sc.startTime}
                               </span>
                             ))}
                           </div>
@@ -548,7 +548,7 @@ export function SubjectsHub({
                   className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm"
                 >
                   <span className="font-medium">
-                    {tw(WEEKDAY_KEYS[sc.weekday])} · {sc.startTime} · {sc.durationMin}
+                    {patternLabel(sc.pattern)} · {sc.startTime} · {sc.durationMin}
                     {ts("minShort")}
                   </span>
                   <span className="flex items-center gap-2">
@@ -580,11 +580,11 @@ export function SubjectsHub({
               <input type="hidden" name="groupId" value={scheduleGroup.id} />
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="sc-weekday">{ts("weekday")}</Label>
-                  <Select id="sc-weekday" name="weekday" defaultValue="1">
-                    {WEEKDAYS.map((wd) => (
-                      <option key={wd} value={wd}>
-                        {tw(WEEKDAY_KEYS[wd])}
+                  <Label htmlFor="sc-pattern">{ts("days")}</Label>
+                  <Select id="sc-pattern" name="pattern" defaultValue="ODD">
+                    {ALL_DAY_PATTERNS.map((p) => (
+                      <option key={p} value={p}>
+                        {patternLabel(p)}
                       </option>
                     ))}
                   </Select>

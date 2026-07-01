@@ -1,5 +1,5 @@
 import { requireRole } from "@/lib/auth";
-import { ROLES } from "@/lib/constants";
+import { PATTERN_WEEKDAYS, ROLES } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { ScheduleManager } from "@/components/admin/schedule-manager";
 
@@ -60,12 +60,15 @@ export default async function AdminSchedulePage() {
   for (const s of schedules) {
     const time = `${s.startTime}–${addMinutes(s.startTime, s.durationMin)}`;
     const label = `${s.group.subject.name} · ${s.group.name}`;
-    const idx = s.weekday - 1;
-    if (s.group.teacherId) {
-      teacherById.get(s.group.teacherId)?.days[idx].push({ label, time });
-    }
-    if (s.roomId) {
-      roomById.get(s.roomId)?.days[idx].push({ label, time });
+    // A pattern (ODD/EVEN) occupies each of its weekdays.
+    for (const weekday of PATTERN_WEEKDAYS[s.pattern] ?? []) {
+      const idx = weekday - 1;
+      if (s.group.teacherId) {
+        teacherById.get(s.group.teacherId)?.days[idx].push({ label, time });
+      }
+      if (s.roomId) {
+        roomById.get(s.roomId)?.days[idx].push({ label, time });
+      }
     }
   }
 

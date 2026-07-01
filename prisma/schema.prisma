@@ -109,13 +109,13 @@ model Room {
   createdAt DateTime @default(now())
 }
 
-/// A recurring weekly timetable entry for a class (e.g. "Mon 15:00, Room 2").
-/// Concrete Lesson rows are generated from these.
+/// A recurring timetable entry for a class. `pattern` is ODD (Mon/Wed/Fri) or
+/// EVEN (Tue/Thu/Sat); concrete Lesson rows are generated on each of those days.
 model ClassSchedule {
   id          String  @id @default(cuid())
   group       Group   @relation(fields: [groupId], references: [id], onDelete: Cascade)
   groupId     String
-  weekday     Int // 1 = Monday … 7 = Sunday
+  pattern     String // "ODD" | "EVEN"
   startTime   String // "HH:MM" (24h)
   durationMin Int     @default(90)
   room        Room?   @relation(fields: [roomId], references: [id], onDelete: SetNull)
@@ -139,6 +139,7 @@ model Lesson {
   room      Room?   @relation(fields: [roomId], references: [id], onDelete: SetNull)
   roomId    String?
   status    String  @default("SCHEDULED") // "SCHEDULED" | "CANCELLED"
+  type      String  @default("LESSON") // "LESSON" | "EXAM" | "MINI_EXAM"
 
   attendances Attendance[]
 

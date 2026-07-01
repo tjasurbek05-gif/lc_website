@@ -73,6 +73,11 @@
     "sat": "Sh",
     "sun": "Ya"
   },
+  "lessonTypes": {
+    "LESSON": "Dars",
+    "EXAM": "Imtihon",
+    "MINI_EXAM": "Mini-imtihon"
+  },
   "schedule": {
     "title": "Jadval",
     "adminHint": "Xonalarni boshqaring va haftalik bandlikni ko'ring. Sinf jadvali «Fanlar» sahifasida belgilanadi.",
@@ -97,6 +102,10 @@
     "noRoom": "Xonasiz",
     "noTimetable": "Jadval hali bo'sh. Quyida haftalik vaqt qo'shing.",
     "weekday": "Kun",
+    "days": "Kunlar",
+    "patternOdd": "Du · Cho · Ju",
+    "patternEven": "Se · Pa · Sh",
+    "lessonType": "Turi",
     "startTime": "Boshlanishi",
     "endTime": "Tugashi",
     "duration": "Davomiyligi (daq)",

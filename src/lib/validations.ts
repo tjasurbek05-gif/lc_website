@@ -111,7 +111,7 @@ const timeSchema = z
 export const scheduleSchema = z.object({
   id: z.string().optional(),
   groupId: z.string().min(1),
-  weekday: z.coerce.number().int().min(1).max(7),
+  pattern: z.enum(["ODD", "EVEN"]),
   startTime: timeSchema,
   durationMin: z.coerce.number().int().min(15).max(480).default(90),
   roomId: z
@@ -129,6 +129,7 @@ export const lessonSchema = z.object({
     .optional()
     .nullable()
     .transform((v) => (v && v.trim().length > 0 ? v.trim() : null)),
+  type: z.enum(["LESSON", "EXAM", "MINI_EXAM"]).default("LESSON"),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date"),
   startTime: timeSchema,
   endTime: timeSchema,

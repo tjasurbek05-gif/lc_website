@@ -11,12 +11,14 @@ import { requireRole } from "@/lib/auth";
 import {
   ATTENDANCE_STATUS,
   LESSON_STATUS,
+  LESSON_TYPES,
   ROLES,
   WEEKDAY_KEYS,
   WEEKDAYS,
 } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import { addDays, cn, formatDate, formatTime, isoWeekday, startOfWeek } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { PageHeader } from "@/components/page-header";
@@ -31,6 +33,7 @@ export default async function StudentCalendarPage({
   const locale = await getLocale();
   const t = await getTranslations("schedule");
   const tw = await getTranslations("weekdays");
+  const tlt = await getTranslations("lessonTypes");
 
   const weekOffset = Number.parseInt(sp.week ?? "0", 10) || 0;
   const now = new Date();
@@ -173,14 +176,19 @@ export default async function StudentCalendarPage({
                       >
                         <span className={cn("mt-1.5 size-2.5 shrink-0 rounded-full", dot)} />
                         <div className="min-w-0">
-                          <p
-                            className={cn(
-                              "font-medium",
-                              cancelled && "text-muted-foreground line-through",
-                            )}
-                          >
-                            {l.title || `${l.group.subject.name} · ${l.group.name}`}
-                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p
+                              className={cn(
+                                "font-medium",
+                                cancelled && "text-muted-foreground line-through",
+                              )}
+                            >
+                              {l.title || `${l.group.subject.name} · ${l.group.name}`}
+                            </p>
+                            {l.type !== LESSON_TYPES.LESSON ? (
+                              <Badge variant="warning">{tlt(l.type)}</Badge>
+                            ) : null}
+                          </div>
                           <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                             <span className="inline-flex items-center gap-1">
                               <CalendarDays className="size-3.5" />
