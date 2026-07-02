@@ -27,6 +27,9 @@ async function main() {
 
   // Clean slate (respecting FK order). Deleting groups also clears the
   // implicit student-enrollment join rows.
+  await prisma.order.deleteMany();
+  await prisma.product.deleteMany();
+  await prisma.roomAssignment.deleteMany();
   await prisma.attendance.deleteMany();
   await prisma.lesson.deleteMany();
   await prisma.classSchedule.deleteMany();
@@ -210,6 +213,12 @@ async function main() {
   let lessonCount = 0;
   let attendanceCount = 0;
 
+  // Coins each student has earned in class (added to their balance later so the
+  // shop is usable straight away).
+  const coinsByStudent = new Map<string, number>();
+  const addCoins = (studentId: string, n: number) =>
+    coinsByStudent.set(studentId, (coinsByStudent.get(studentId) ?? 0) + n);
+
   for (const s of scheduleDefs) {
     const g = groups[s.group];
     const roomId = rooms[s.room].id;
@@ -219,9 +228,15 @@ async function main() {
       const day = addDays(weekStart, s.weekday - 1);
       const startAt = atTime(day, s.startTime);
       const endAt = new Date(startAt.getTime() + DURATION * 60_000);
+      // Roughly every fourth past lesson is an exam (wider coin range).
+      const isExam = w === -1;
+      const lessonType = isExam ? "EXAM" : "TYPICAL";
+      const limit = isExam ? 10 : 4;
       const lesson = await prisma.lesson.create({
         data: {
           groupId: g.id,
+          title: isExam ? "Exam" : `Lesson ${w + 5}`,
+          type: lessonType,
           startAt,
           endAt,
           roomId,
@@ -232,6 +247,9 @@ async function main() {
       if (startAt.getTime() < now.getTime() && studentIds.length) {
         const rows = studentIds.map((studentId) => {
           const absent = Math.random() < 0.15;
+          // Present students earn a few coins (an exam can award more, or dock).
+          const coins = absent ? 0 : randInt(isExam ? -2 : 1, limit);
+          if (coins !== 0) addCoins(studentId, coins);
           return {
             lessonId: lesson.id,
             studentId,
@@ -239,6 +257,7 @@ async function main() {
             reason: absent
               ? absenceReasons[randInt(0, absenceReasons.length - 1)]
               : null,
+            coins,
           };
         });
         await prisma.attendance.createMany({ data: rows });
@@ -247,8 +266,92 @@ async function main() {
     }
   }
 
+  // Apply earned coins to each student's balance.
+  for (const [studentId, coins] of coinsByStudent) {
+    if (coins > 0) {
+      await prisma.user.update({
+        where: { id: studentId },
+        data: { coins: { increment: coins } },
+      });
+    }
+  }
+
+  // --- Room assignments: put each class's teacher in its room for the weekly
+  //     slot (drives the teacher's "class hours" and blocks the room). ---
+  const addMinutesHHMM = (hhmm: string, min: number) => {
+    const [h, m] = hhmm.split(":").map(Number);
+    const total = h * 60 + m + min;
+    return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+  };
+  let assignmentCount = 0;
+  for (const s of scheduleDefs) {
+    const g = groups[s.group];
+    await prisma.roomAssignment.create({
+      data: {
+        roomId: rooms[s.room].id,
+        teacherId: g.teacherId,
+        weekday: s.weekday,
+        startTime: s.startTime,
+        endTime: addMinutesHHMM(s.startTime, DURATION),
+      },
+    });
+    assignmentCount++;
+  }
+
+  // --- Coin shop products ---
+  const productDefs = [
+    { name: "Notebook", info: "A5 ruled notebook, 96 pages.", price: 15, stock: 20 },
+    { name: "Gel pen set", info: "Set of 6 colored gel pens.", price: 10, stock: 25 },
+    { name: "Water bottle", info: "500ml reusable bottle with the center's logo.", price: 30, stock: 8 },
+    { name: "Sticker pack", info: "Fun sticker sheet for laptops and notebooks.", price: 5, stock: 40 },
+    { name: "Movie ticket", info: "One ticket to the end-of-term movie afternoon.", price: 50, stock: 5 },
+    { name: "Backpack", info: "Durable school backpack.", price: 120, stock: 3, disabled: true },
+  ];
+  const products: { id: string; name: string; price: number }[] = [];
+  for (const def of productDefs) {
+    const p = await prisma.product.create({ data: def });
+    products.push({ id: p.id, name: p.name, price: p.price });
+  }
+
+  // --- A few pending orders (coins already deducted, stock decremented). ---
+  const orderable = products.filter((p) => p.price <= 30);
+  const buyers = enrollments
+    .map((e) => e.studentId)
+    .filter((v, i, a) => a.indexOf(v) === i)
+    .slice(0, 4);
+  let orderCount = 0;
+  for (let i = 0; i < buyers.length; i++) {
+    const studentId = buyers[i];
+    const product = orderable[i % orderable.length];
+    const student = await prisma.user.findUnique({
+      where: { id: studentId },
+      select: { coins: true },
+    });
+    if (!student || student.coins < product.price) continue;
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: studentId },
+        data: { coins: { decrement: product.price } },
+      }),
+      prisma.product.update({
+        where: { id: product.id },
+        data: { stock: { decrement: 1 } },
+      }),
+      prisma.order.create({
+        data: {
+          studentId,
+          productId: product.id,
+          productName: product.name,
+          coinsSpent: product.price,
+          status: "PENDING",
+        },
+      }),
+    ]);
+    orderCount++;
+  }
+
   console.log(
-    `Seeded: ${subjectDefs.length} subjects, ${groupDefs.length} classes, 1 admin, ${teacherDefs.length} teachers, ${studentDefs.length} students, ${gradeRows.length} grades, ${roomDefs.length} rooms, ${lessonCount} lessons, ${attendanceCount} attendance records.`,
+    `Seeded: ${subjectDefs.length} subjects, ${groupDefs.length} classes, 1 admin, ${teacherDefs.length} teachers, ${studentDefs.length} students, ${gradeRows.length} grades, ${roomDefs.length} rooms, ${assignmentCount} room assignments, ${lessonCount} lessons, ${attendanceCount} attendance records, ${productDefs.length} products, ${orderCount} orders.`,
   );
   console.log("\nDemo logins (password: password123):");
   console.log("  Admin   → +998901112201");

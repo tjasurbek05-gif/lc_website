@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import {
   BookOpen,
   ClipboardList,
+  Coins,
   GraduationCap,
   TrendingUp,
   Trophy,
@@ -39,7 +40,7 @@ export default async function StudentDashboard() {
   const [me, grades] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.userId },
-      select: { enrolledGroups: { select: { id: true, subjectId: true } } },
+      select: { coins: true, enrolledGroups: { select: { id: true, subjectId: true } } },
     }),
     prisma.grade.findMany({
       where: { studentId: session.userId },
@@ -105,7 +106,13 @@ export default async function StudentDashboard() {
         description={t("welcome", { name: session.name })}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <StatCard
+          label={t("coins")}
+          value={me?.coins ?? 0}
+          icon={<Coins />}
+          accent="warning"
+        />
         <StatCard
           label={t("overallAverage")}
           value={`${overall}%`}

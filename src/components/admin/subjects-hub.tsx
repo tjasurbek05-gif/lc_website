@@ -34,8 +34,6 @@ import {
 } from "@/app/actions/admin";
 import { deleteSchedule, saveSchedule } from "@/app/actions/schedule";
 
-const MAX_SUBJECTS = 2;
-
 type Named = { id: string; name: string };
 export type StudentLite = { id: string; name: string; subjectIds: string[] };
 export type ScheduleLite = {
@@ -92,7 +90,7 @@ export function SubjectsHub({
 
   // Manage-students modal — track ids so we always read live data from props.
   const [manageGroupId, setManageGroupId] = useState<string | null>(null);
-  const [manageSubjectId, setManageSubjectId] = useState<string>("");
+  const [, setManageSubjectId] = useState<string>("");
   const [search, setSearch] = useState("");
 
   // Timetable (schedule) modal for a class.
@@ -483,17 +481,12 @@ export function SubjectsHub({
               filteredStudents.map((st) => {
                 const enrolled =
                   manageGroup?.students.some((x) => x.id === st.id) ?? false;
-                const inThisSubject = st.subjectIds.includes(manageSubjectId);
-                // Blocked when the student already studies the max number of
-                // OTHER subjects and isn't already in this one.
-                const atLimit =
-                  !inThisSubject && st.subjectIds.length >= MAX_SUBJECTS;
-                const disabled = !enrolled && atLimit;
+                // Students may study any number of subjects (2+), so there is no
+                // enrolment cap here.
                 return (
                   <button
                     key={st.id}
                     type="button"
-                    disabled={disabled}
                     onClick={() =>
                       manageGroup &&
                       onToggleStudent(enrolled, manageGroup.id, st.id)
@@ -502,17 +495,13 @@ export function SubjectsHub({
                       enrolled
                         ? "border-primary/40 bg-primary/5"
                         : "border-border hover:bg-muted"
-                    } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
+                    }`}
                   >
                     <span className="font-medium">{st.name}</span>
                     {enrolled ? (
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-primary">
                         {t("enrolled")}
                         <X className="size-3.5" />
-                      </span>
-                    ) : disabled ? (
-                      <span className="text-xs text-muted-foreground">
-                        {t("subjectLimitShort")}
                       </span>
                     ) : (
                       <Plus className="size-4 text-muted-foreground" />

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import {
   ArrowRight,
   BookOpen,
@@ -10,43 +10,36 @@ import {
   Users,
 } from "lucide-react";
 import { requireRole } from "@/lib/auth";
-import { ATTENDANCE_STATUS, ROLES } from "@/lib/constants";
+import { ORDER_STATUS, ROLES } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
-import { formatDate } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
-import { Badge } from "@/components/ui/badge";
-import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
-import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/page-header";
+import { OrdersBoard } from "@/components/admin/orders-board";
 
 export default async function AdminDashboard() {
   await requireRole(ROLES.ADMIN);
   const t = await getTranslations("admin");
-  const tc = await getTranslations("common");
-  const ts = await getTranslations("schedule");
-  const locale = await getLocale();
+  const ts = await getTranslations("shop");
 
-  const [students, teachers, groups, subjects, absences] = await Promise.all([
+  const [students, teachers, groups, subjects, orders] = await Promise.all([
     prisma.user.count({ where: { role: ROLES.STUDENT } }),
     prisma.user.count({ where: { role: ROLES.TEACHER } }),
     prisma.group.count(),
     prisma.subject.count(),
-    prisma.attendance.findMany({
-      where: { status: ATTENDANCE_STATUS.ABSENT },
-      include: {
-        student: { select: { name: true } },
-        lesson: {
-          select: {
-            startAt: true,
-            group: { select: { name: true, subject: { select: { name: true } } } },
-          },
-        },
-      },
-      orderBy: { lesson: { startAt: "desc" } },
-      take: 8,
+    prisma.order.findMany({
+      where: { status: ORDER_STATUS.PENDING },
+      include: { student: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
     }),
   ]);
+
+  const orderRows = orders.map((o) => ({
+    id: o.id,
+    studentName: o.student.name,
+    productName: o.productName,
+    coinsSpent: o.coinsSpent,
+  }));
 
   const quickActions = [
     {
@@ -113,45 +106,10 @@ export default async function AdminDashboard() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>{ts("recentAbsences")}</CardTitle>
+          <CardTitle>{ts("allOrders")}</CardTitle>
         </CardHeader>
         <CardContent className="px-0 pb-0">
-          {absences.length ? (
-            <Table>
-              <THead>
-                <TR>
-                  <TH className="pl-5">{tc("student")}</TH>
-                  <TH>{ts("class")}</TH>
-                  <TH>{ts("reason")}</TH>
-                  <TH className="pr-5 text-right">{tc("date")}</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {absences.map((a) => (
-                  <TR key={a.id}>
-                    <TD className="pl-5 font-medium">{a.student.name}</TD>
-                    <TD className="text-muted-foreground">
-                      {a.lesson.group.subject.name} · {a.lesson.group.name}
-                    </TD>
-                    <TD>
-                      {a.reason ? (
-                        <span className="text-muted-foreground">{a.reason}</span>
-                      ) : (
-                        <Badge variant="danger">{ts("absent")}</Badge>
-                      )}
-                    </TD>
-                    <TD className="pr-5 text-right text-muted-foreground">
-                      {formatDate(a.lesson.startAt, locale)}
-                    </TD>
-                  </TR>
-                ))}
-              </TBody>
-            </Table>
-          ) : (
-            <div className="p-5">
-              <EmptyState title={ts("noAbsences")} />
-            </div>
-          )}
+          <OrdersBoard orders={orderRows} />
         </CardContent>
       </Card>
     </div>

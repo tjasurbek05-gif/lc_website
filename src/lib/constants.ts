@@ -13,6 +13,39 @@ export const ALL_ROLES: Role[] = [ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT];
 export const GRADE_TYPES = ["EXAM", "QUIZ", "HOMEWORK", "PROJECT"] as const;
 export type GradeType = (typeof GRADE_TYPES)[number];
 
+/**
+ * A teacher-run lesson is either a "typical" session or an "exam". The lesson
+ * type bounds how many coins a teacher may award (or dock) per student.
+ */
+export const LESSON_TYPES = ["TYPICAL", "EXAM"] as const;
+export type LessonType = (typeof LESSON_TYPES)[number];
+
+/** Max magnitude of coins a teacher can give/take per student, by lesson type. */
+export const COIN_LIMITS: Record<LessonType, number> = {
+  TYPICAL: 4,
+  EXAM: 10,
+};
+
+/** Coin bound helper: returns the +/- range for a given lesson type. */
+export function coinLimitFor(type: string): number {
+  return type === "EXAM" ? COIN_LIMITS.EXAM : COIN_LIMITS.TYPICAL;
+}
+
+/** Order lifecycle for coin-shop purchases. */
+export const ORDER_STATUS = {
+  PENDING: "PENDING",
+  DELIVERED: "DELIVERED",
+  REJECTED: "REJECTED",
+} as const;
+export type OrderStatus = (typeof ORDER_STATUS)[keyof typeof ORDER_STATUS];
+
+/** Display / sort order for the People list: admins, then teachers, then students. */
+export const ROLE_ORDER: Record<string, number> = {
+  ADMIN: 0,
+  TEACHER: 1,
+  STUDENT: 2,
+};
+
 export const LESSON_STATUS = {
   SCHEDULED: "SCHEDULED",
   CANCELLED: "CANCELLED",
