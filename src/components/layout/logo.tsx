@@ -1,15 +1,11 @@
-import { Navigation } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Brand logo + wordmark for "Brian".
+ * Brand logo for "Brian".
  *
- * A rounded badge carries the brand's signature up-right cursor/arrow, next to
- * the "Brian" wordmark. The wordmark uses currentColor so it reads correctly on
- * both the dark sidebar (variant="light") and the light top bar.
- *
- * To use an exact logo asset instead, drop it in `public/` (e.g. logo.svg) and
- * swap the badge below for `<Image src="/logo.svg" … />`.
+ * Uses the real wordmark asset at `public/logo.png` (black mark on a
+ * transparent background). On dark surfaces pass `variant="light"`, which
+ * inverts the mark to white so it stays visible.
  */
 export function Logo({
   className,
@@ -19,18 +15,14 @@ export function Logo({
   variant?: "default" | "light";
 }) {
   return (
-    <span className={cn("flex items-center gap-2.5", className)} aria-label="Brian">
-      <span className="flex size-9 items-center justify-center rounded-xl bg-brand-gradient text-white shadow-sm">
-        <Navigation className="size-[18px] rotate-45 fill-current" />
-      </span>
-      <span
-        className={cn(
-          "text-xl font-extrabold tracking-tight",
-          variant === "light" ? "text-white" : "text-foreground",
-        )}
-      >
-        Brian
-      </span>
+    <span className={cn("flex items-center", className)}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/logo.png"
+        alt="Brian"
+        draggable={false}
+        className={cn("h-7 w-auto select-none", variant === "light" && "invert")}
+      />
     </span>
   );
 }
