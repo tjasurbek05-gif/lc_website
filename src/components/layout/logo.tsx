@@ -1,12 +1,15 @@
-import { GraduationCap } from "lucide-react";
+import { Navigation } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Brand logo + wordmark.
+ * Brand logo + wordmark for "Brian".
  *
- * 👉 PLACEHOLDER: replace the gradient icon box below with the learning
- * center's real logo (e.g. an <Image src="/logo.svg" />) and update the
- * wordmark text. The layout will adapt automatically.
+ * A rounded badge carries the brand's signature up-right cursor/arrow, next to
+ * the "Brian" wordmark. The wordmark uses currentColor so it reads correctly on
+ * both the dark sidebar (variant="light") and the light top bar.
+ *
+ * To use an exact logo asset instead, drop it in `public/` (e.g. logo.svg) and
+ * swap the badge below for `<Image src="/logo.svg" … />`.
  */
 export function Logo({
   className,
@@ -16,17 +19,17 @@ export function Logo({
   variant?: "default" | "light";
 }) {
   return (
-    <span className={cn("flex items-center gap-2.5", className)}>
-      <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-sm">
-        <GraduationCap className="size-5" />
+    <span className={cn("flex items-center gap-2.5", className)} aria-label="Brian">
+      <span className="flex size-9 items-center justify-center rounded-xl bg-brand-gradient text-white shadow-sm">
+        <Navigation className="size-[18px] rotate-45 fill-current" />
       </span>
       <span
         className={cn(
-          "text-lg font-bold tracking-tight",
+          "text-xl font-extrabold tracking-tight",
           variant === "light" ? "text-white" : "text-foreground",
         )}
       >
-        Learn<span className="text-indigo-500">Center</span>
+        Brian
       </span>
     </span>
   );

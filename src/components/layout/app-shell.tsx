@@ -6,11 +6,12 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   BookOpen,
-  CalendarDays,
-  ClipboardList,
-  GraduationCap,
+  ClipboardCheck,
+  DoorOpen,
   LayoutDashboard,
   Menu,
+  ShoppingBag,
+  Store,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -28,17 +29,17 @@ const NAV: Record<Role, NavItem[]> = {
     { href: "/admin", key: "dashboard", icon: LayoutDashboard },
     { href: "/admin/users", key: "people", icon: Users },
     { href: "/admin/subjects", key: "subjects", icon: BookOpen },
-    { href: "/admin/schedule", key: "schedule", icon: CalendarDays },
+    { href: "/admin/rooms", key: "rooms", icon: DoorOpen },
+    { href: "/admin/shop", key: "coinShop", icon: Store },
+    { href: "/admin/reviews", key: "teachersReview", icon: ClipboardCheck },
   ],
   TEACHER: [
-    { href: "/teacher", key: "dashboard", icon: LayoutDashboard },
-    { href: "/teacher/schedule", key: "schedule", icon: CalendarDays },
-    { href: "/teacher/grades", key: "grades", icon: ClipboardList },
+    { href: "/teacher", key: "home", icon: LayoutDashboard },
+    { href: "/teacher/lessons", key: "lesson", icon: ClipboardCheck },
   ],
   STUDENT: [
     { href: "/student", key: "dashboard", icon: LayoutDashboard },
-    { href: "/student/calendar", key: "calendar", icon: CalendarDays },
-    { href: "/student/grades", key: "myGrades", icon: GraduationCap },
+    { href: "/student/shop", key: "coinShop", icon: ShoppingBag },
   ],
 };
 
@@ -90,7 +91,7 @@ export function AppShell({
         })}
       </nav>
       <div className="border-t border-sidebar-border p-4 text-xs text-sidebar-foreground/50">
-        © {new Date().getFullYear()} LearnCenter
+        © {new Date().getFullYear()} Brian
       </div>
     </div>
   );

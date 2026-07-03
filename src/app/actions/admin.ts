@@ -15,9 +15,6 @@ import {
 
 export type ActionState = { error?: string; ok?: boolean };
 
-/** A student may be enrolled in classes spanning at most this many subjects. */
-const MAX_SUBJECTS_PER_STUDENT = 2;
-
 function revalidateAdmin(path: string) {
   revalidatePath(path);
   revalidatePath("/admin");
@@ -174,8 +171,8 @@ export async function deleteGroup(id: string) {
 /* --------------------------- Enrollment ---------------------------- */
 
 /**
- * Enroll a student into a class (group). Enforces the rule that a student may
- * only ever study up to MAX_SUBJECTS_PER_STUDENT distinct subjects.
+ * Enroll a student into a class (group). A student may study any number of
+ * subjects (2+), so there is no subject cap.
  */
 export async function enrollStudent(
   groupId: string,
@@ -189,15 +186,10 @@ export async function enrollStudent(
     prisma.group.findUnique({ where: { id: groupId }, select: { subjectId: true } }),
     prisma.user.findUnique({
       where: { id: studentId },
-      select: { role: true, enrolledGroups: { select: { subjectId: true } } },
+      select: { role: true },
     }),
   ]);
   if (!group || !student || student.role !== ROLES.STUDENT) return { error: "invalid" };
-
-  const currentSubjects = new Set(student.enrolledGroups.map((g) => g.subjectId));
-  if (!currentSubjects.has(group.subjectId) && currentSubjects.size >= MAX_SUBJECTS_PER_STUDENT) {
-    return { error: "subjectLimit" };
-  }
 
   await prisma.group.update({
     where: { id: groupId },

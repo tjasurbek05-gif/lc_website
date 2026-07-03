@@ -24,16 +24,20 @@ model User {
   avatarUrl    String?
   active       Boolean @default(true)
 
+  // Coin balance (students earn coins from teachers and spend them in the shop).
+  coins Int @default(0)
+
   // Relations.
   // Students are enrolled into groups (classes) — implicit many-to-many. A
-  // student may be enrolled in groups across at most 2 subjects, enforced in
-  // the app layer (see src/app/actions/admin.ts). A teacher owns the groups
+  // student may study any number of subjects (2+). A teacher owns the groups
   // they teach via "GroupTeacher".
-  enrolledGroups Group[]      @relation("GroupStudents")
-  groupsTaught   Group[]      @relation("GroupTeacher")
-  gradesReceived Grade[]      @relation("StudentGrades")
-  gradesGiven    Grade[]      @relation("TeacherGrades")
-  attendances    Attendance[]
+  enrolledGroups  Group[]          @relation("GroupStudents")
+  groupsTaught    Group[]          @relation("GroupTeacher")
+  gradesReceived  Grade[]          @relation("StudentGrades")
+  gradesGiven     Grade[]          @relation("TeacherGrades")
+  attendances     Attendance[]
+  orders          Order[]          @relation("StudentOrders")
+  roomAssignments RoomAssignment[] @relation("TeacherRoomAssignments")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -101,12 +105,13 @@ model Grade {
 
 /// A physical room lessons can be held in.
 model Room {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  capacity  Int?
-  schedules ClassSchedule[]
-  lessons   Lesson[]
-  createdAt DateTime @default(now())
+  id          String           @id @default(cuid())
+  name        String           @unique
+  capacity    Int?
+  schedules   ClassSchedule[]
+  lessons     Lesson[]
+  assignments RoomAssignment[]
+  createdAt   DateTime         @default(now())
 }
 
 /// A recurring weekly timetable entry for a class (e.g. "Mon 15:00, Room 2").
@@ -134,6 +139,7 @@ model Lesson {
   group     Group   @relation(fields: [groupId], references: [id], onDelete: Cascade)
   groupId   String
   title     String? // optional label; defaults to the subject/class name in the UI
+  type      String  @default("TYPICAL") // "TYPICAL" | "EXAM" (bounds the coins a teacher can give)
   startAt   DateTime
   endAt     DateTime
   room      Room?   @relation(fields: [roomId], references: [id], onDelete: SetNull)
@@ -159,9 +165,58 @@ model Attendance {
   studentId String
   status    String // "PRESENT" | "ABSENT"
   reason    String?
+  coins     Int      @default(0) // coins the teacher awarded this student for this lesson
   markedAt  DateTime @default(now())
 
   @@unique([lessonId, studentId])
   @@index([studentId])
   @@index([status])
+}
+
+/// A product a student can buy from the coin shop with earned coins.
+model Product {
+  id        String   @id @default(cuid())
+  name      String
+  imageUrl  String? // optional image (URL or data URI)
+  info      String? // description / information
+  price     Int // cost in coins
+  stock     Int      @default(0) // availability number remaining
+  disabled  Boolean  @default(false) // hidden from the shop when true
+  orders    Order[]
+  createdAt DateTime @default(now())
+}
+
+/// A student's order placed from the coin shop. Coins are deducted when placed;
+/// admins deliver (fulfil) or reject (refund + restock) it.
+model Order {
+  id          String   @id @default(cuid())
+  student     User     @relation("StudentOrders", fields: [studentId], references: [id], onDelete: Cascade)
+  studentId   String
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productId   String?
+  productName String // snapshot of the product name at order time
+  quantity    Int      @default(1) // how many units were ordered
+  coinsSpent  Int // total coins deducted from the student (price × quantity; refunded on reject)
+  status      String   @default("PENDING") // "PENDING" | "DELIVERED" | "REJECTED"
+  createdAt   DateTime @default(now())
+
+  @@index([status])
+  @@index([studentId])
+}
+
+/// A teacher assigned to a room for a weekly time slot (admin-managed). Drives
+/// the teacher's "class hours" and blocks the room for that time.
+model RoomAssignment {
+  id        String   @id @default(cuid())
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomId    String
+  teacher   User     @relation("TeacherRoomAssignments", fields: [teacherId], references: [id], onDelete: Cascade)
+  teacherId String
+  weekday   Int // 1 = Monday … 7 = Sunday
+  startTime String // "HH:MM" (24h)
+  endTime   String // "HH:MM" (24h)
+  createdAt DateTime @default(now())
+
+  @@index([roomId, weekday])
+  @@index([teacherId])
 }

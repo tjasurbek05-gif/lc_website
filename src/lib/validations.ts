@@ -149,6 +149,67 @@ export const attendanceItemSchema = z.object({
     .transform((v) => (v && v.trim().length > 0 ? v.trim() : null)),
 });
 
+/* ------------------------- Coin shop & orders ------------------------- */
+
+export const productSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1, "Product name is required").max(80),
+  imageUrl: z
+    .string()
+    .trim()
+    .optional()
+    .nullable()
+    .transform((v) => (v && v.length > 0 ? v : null)),
+  info: z
+    .string()
+    .trim()
+    .optional()
+    .nullable()
+    .transform((v) => (v && v.length > 0 ? v : null)),
+  price: z.coerce.number().int().min(0, "Price must be 0 or more"),
+  stock: z.coerce.number().int().min(0, "Availability must be 0 or more"),
+});
+
+/* ---------------------- Teacher lessons & coins ---------------------- */
+
+export const lessonTypeSchema = z.enum(["TYPICAL", "EXAM"]);
+
+// A single row of the "typical table": attendance + a coin award.
+export const lessonEntrySchema = z.object({
+  studentId: z.string().min(1),
+  status: z.enum(["PRESENT", "ABSENT"]),
+  reason: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v && v.trim().length > 0 ? v.trim() : null)),
+  coins: z.coerce.number().int(),
+});
+
+export const teacherLessonSchema = z.object({
+  groupId: z.string().min(1, "Group is required"),
+  title: z.string().min(1, "Lesson name is required").max(120),
+  type: lessonTypeSchema,
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date"),
+});
+
+/* ---------------------- Room ↔ teacher assignments ---------------------- */
+
+export const roomAssignmentSchema = z
+  .object({
+    roomId: z.string().min(1),
+    teacherId: z.string().min(1, "Teacher is required"),
+    weekdays: z
+      .array(z.coerce.number().int().min(1).max(7))
+      .min(1, "Pick at least one day"),
+    startTime: timeSchema,
+    endTime: timeSchema,
+  })
+  .refine((d) => d.endTime > d.startTime, {
+    message: "End time must be after start time",
+    path: ["endTime"],
+  });
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UserCreateInput = z.infer<typeof userCreateSchema>;
 export type GradeCreateInput = z.infer<typeof gradeCreateSchema>;

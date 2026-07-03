@@ -1,58 +1,44 @@
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { BookOpen, ChevronRight, Layers, TrendingUp, Users } from "lucide-react";
+import { Clock, DoorOpen, Layers, Users } from "lucide-react";
 import { requireRole } from "@/lib/auth";
-import { ROLES } from "@/lib/constants";
+import { ROLES, WEEKDAY_KEYS } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
-import { averagePercent } from "@/lib/metrics";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/ui/stat-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/page-header";
-import { ScoreBadge } from "@/components/score-badge";
 
-export default async function TeacherDashboard() {
+/** "HH:MM" → minutes since midnight. */
+function timeToMin(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+export default async function TeacherHome() {
   const session = await requireRole(ROLES.TEACHER);
   const t = await getTranslations("teacher");
+  const tw = await getTranslations("weekdays");
 
-  // A teacher's "classes" are the groups they own. Each group carries one subject.
-  const classes = await prisma.group.findMany({
-    where: { teacherId: session.userId },
-    include: {
-      subject: { select: { id: true, name: true } },
-      students: { select: { id: true } },
-    },
-  });
-  classes.sort((a, b) =>
-    `${a.subject.name}${a.name}`.localeCompare(`${b.subject.name}${b.name}`),
+  const [classes, assignments] = await Promise.all([
+    prisma.group.findMany({
+      where: { teacherId: session.userId },
+      select: { id: true, students: { select: { id: true } } },
+    }),
+    prisma.roomAssignment.findMany({
+      where: { teacherId: session.userId },
+      orderBy: [{ weekday: "asc" }, { startTime: "asc" }],
+      include: { room: { select: { name: true } } },
+    }),
+  ]);
+
+  const totalStudents = new Set(classes.flatMap((c) => c.students.map((s) => s.id))).size;
+
+  // Weekly class hours = sum of assigned slot durations.
+  const totalMinutes = assignments.reduce(
+    (acc, a) => acc + Math.max(0, timeToMin(a.endTime) - timeToMin(a.startTime)),
+    0,
   );
-
-  const grades = classes.length
-    ? await prisma.grade.findMany({
-        where: { teacherId: session.userId },
-        select: { subjectId: true, studentId: true, value: true, maxValue: true },
-      })
-    : [];
-
-  const toLike = (g: { value: number; maxValue: number }) => ({
-    value: g.value,
-    maxValue: g.maxValue,
-    date: new Date(),
-    type: "",
-    subjectId: "",
-  });
-  const avgPerformance = grades.length ? averagePercent(grades.map(toLike)) : 0;
-
-  const subjectIds = new Set(classes.map((c) => c.subjectId));
-  const allStudentIds = new Set(classes.flatMap((c) => c.students.map((s) => s.id)));
-  const totalStudents = allStudentIds.size;
-
-  function classAverage(subjectId: string, studentIds: Set<string>) {
-    const gs = grades.filter(
-      (g) => g.subjectId === subjectId && studentIds.has(g.studentId),
-    );
-    return gs.length ? averagePercent(gs.map(toLike)) : null;
-  }
+  const classHours = Math.round((totalMinutes / 60) * 10) / 10;
 
   return (
     <div>
@@ -61,59 +47,49 @@ export default async function TeacherDashboard() {
         description={t("welcome", { name: session.name })}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label={t("classesCount")} value={classes.length} icon={<Layers />} />
         <StatCard label={t("studentsCount")} value={totalStudents} icon={<Users />} />
         <StatCard
-          label={t("subjectsCount")}
-          value={subjectIds.size}
-          icon={<BookOpen />}
-        />
-        <StatCard
-          label={t("avgPerformance")}
-          value={`${avgPerformance}%`}
-          icon={<TrendingUp />}
-          accent={avgPerformance >= 80 ? "success" : avgPerformance >= 60 ? "primary" : "warning"}
+          label={t("classHours")}
+          value={classHours}
+          hint={t("perWeek")}
+          icon={<Clock />}
+          accent="success"
         />
       </div>
 
-      <h2 className="mb-4 mt-8 text-lg font-semibold">{t("myClassesTitle")}</h2>
-      {classes.length === 0 ? (
-        <EmptyState title={t("noClasses")} icon={<Layers />} />
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {classes.map((c) => {
-            const studentIds = new Set(c.students.map((s) => s.id));
-            const avg = classAverage(c.subjectId, studentIds);
-            return (
-              <Link key={c.id} href={`/teacher/grades?class=${c.id}`}>
-                <Card className="group h-full transition-colors hover:border-primary/40">
-                  <CardContent className="flex h-full flex-col p-5 pt-5">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-semibold">{c.subject.name}</p>
-                        <p className="text-sm text-muted-foreground">{c.name}</p>
-                      </div>
-                      <ChevronRight className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                    </div>
-                    <div className="mt-6 flex items-center justify-between">
-                      <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <Users className="size-4" />
-                        {c.students.length}
-                      </span>
-                      {avg == null ? (
-                        <span className="text-sm text-muted-foreground">—</span>
-                      ) : (
-                        <ScoreBadge percent={avg} />
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-      )}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>{t("myHours")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {assignments.length === 0 ? (
+            <EmptyState title={t("noHours")} icon={<Clock />} />
+          ) : (
+            <ul className="space-y-2">
+              {assignments.map((a) => (
+                <li
+                  key={a.id}
+                  className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-muted/30 px-4 py-2.5 text-sm"
+                >
+                  <span className="w-12 font-semibold">
+                    {tw(WEEKDAY_KEYS[a.weekday])}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                    <Clock className="size-4" />
+                    {a.startTime}–{a.endTime}
+                  </span>
+                  <span className="ml-auto inline-flex items-center gap-1.5 text-muted-foreground">
+                    <DoorOpen className="size-4" />
+                    {a.room.name}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-# LearnCenter
+# Brian
 
 A modern, multi-role management platform for a learning center. Students see their
 marks and progress, teachers grade in seconds, and admins run everything from one place.
