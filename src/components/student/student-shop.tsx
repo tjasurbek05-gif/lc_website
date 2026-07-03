@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Coins, Package } from "lucide-react";
+import { CheckCircle2, Coins, Minus, Package, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,7 @@ export type ShopProduct = {
 type OrderRow = {
   id: string;
   productName: string;
+  quantity: number;
   coinsSpent: number;
   status: string;
   dateLabel: string;
@@ -42,18 +43,29 @@ export function StudentShop({
   statusDelivered: string;
 }) {
   const t = useTranslations("shop");
+  const te = useTranslations("errors");
   const router = useRouter();
+  const [qty, setQty] = useState<Record<string, number>>({});
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | undefined>();
-  const te = useTranslations("errors");
+  const [notice, setNotice] = useState<string | undefined>();
   const [, startTransition] = useTransition();
 
+  const quantityOf = (id: string) => qty[id] ?? 1;
+  function setQuantity(id: string, n: number) {
+    setQty((prev) => ({ ...prev, [id]: Math.max(1, Math.floor(n) || 1) }));
+  }
+
   async function buy(id: string) {
+    const n = quantityOf(id);
     setPendingId(id);
     setError(undefined);
-    const res = await placeOrder(id);
+    setNotice(undefined);
+    const res = await placeOrder(id, n);
     setPendingId(null);
     if (res?.ok) {
+      setQuantity(id, 1);
+      setNotice(t("orderPlaced"));
       startTransition(() => router.refresh());
     } else {
       setError(res?.error ?? "invalid");
@@ -73,6 +85,12 @@ export function StudentShop({
         }
       />
 
+      {notice ? (
+        <p className="mb-4 flex items-center gap-2 rounded-lg border border-success/30 bg-success/5 px-4 py-2.5 text-sm font-medium text-success">
+          <CheckCircle2 className="size-4 shrink-0" />
+          {notice}
+        </p>
+      ) : null}
       {error ? (
         <p className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2 text-sm text-destructive">
           {te(error)}
@@ -84,8 +102,9 @@ export function StudentShop({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {products.map((p) => {
-            const affordable = coins >= p.price;
-            const inStock = p.stock > 0;
+            const n = quantityOf(p.id);
+            const total = p.price * n;
+            const affordable = coins >= total;
             const busy = pendingId === p.id;
             return (
               <Card key={p.id} className="flex flex-col overflow-hidden">
@@ -115,21 +134,49 @@ export function StudentShop({
                     </p>
                   ) : null}
                   <p className="mt-2 text-xs text-muted-foreground">
-                    {inStock ? t("inStock", { count: p.stock }) : t("outOfStock")}
+                    {p.stock > 0 ? t("inStock", { count: p.stock }) : t("outOfStock")}
                   </p>
-                  <Button
-                    className="mt-4"
-                    disabled={!affordable || !inStock || busy}
-                    onClick={() => buy(p.id)}
-                  >
-                    {!inStock
-                      ? t("outOfStock")
-                      : !affordable
-                        ? t("notEnough")
-                        : busy
-                          ? t("ordering")
-                          : t("order")}
-                  </Button>
+
+                  <div className="mt-4 flex items-center gap-2">
+                    {/* Quantity stepper */}
+                    <div className="flex items-center rounded-lg border border-border">
+                      <button
+                        type="button"
+                        onClick={() => setQuantity(p.id, n - 1)}
+                        className="flex size-9 items-center justify-center text-muted-foreground hover:bg-muted"
+                        aria-label="-1"
+                      >
+                        <Minus className="size-4" />
+                      </button>
+                      <input
+                        type="number"
+                        min={1}
+                        value={n}
+                        onChange={(e) => setQuantity(p.id, Number(e.target.value))}
+                        className="h-9 w-12 border-x border-border bg-card text-center text-sm focus-visible:outline-none"
+                        aria-label={t("quantity")}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setQuantity(p.id, n + 1)}
+                        className="flex size-9 items-center justify-center text-muted-foreground hover:bg-muted"
+                        aria-label="+1"
+                      >
+                        <Plus className="size-4" />
+                      </button>
+                    </div>
+                    <Button
+                      className="flex-1"
+                      disabled={!affordable || busy}
+                      onClick={() => buy(p.id)}
+                    >
+                      {busy
+                        ? t("ordering")
+                        : !affordable
+                          ? t("notEnough")
+                          : `${t("order")} · ${total}`}
+                    </Button>
+                  </div>
                 </div>
               </Card>
             );
@@ -145,7 +192,12 @@ export function StudentShop({
               {orders.map((o) => (
                 <li key={o.id} className="flex items-center gap-3 px-5 py-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{o.productName}</p>
+                    <p className="truncate font-medium">
+                      {o.productName}
+                      {o.quantity > 1 ? (
+                        <span className="text-muted-foreground"> × {o.quantity}</span>
+                      ) : null}
+                    </p>
                     <p className="text-xs text-muted-foreground">{o.dateLabel}</p>
                   </div>
                   <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">

@@ -1,24 +1,9 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import {
-  BookOpen,
-  ClipboardList,
-  Coins,
-  GraduationCap,
-  TrendingUp,
-  Trophy,
-} from "lucide-react";
+import { Coins, Sparkles, TrendingUp, Trophy } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { ROLES } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
-import {
-  averagePercent,
-  mean,
-  monthlyTrend,
-  overallGpa,
-  summarizeBySubject,
-  toPercent,
-} from "@/lib/metrics";
-import { formatDate } from "@/lib/utils";
+import { addDays, formatDate, startOfWeek } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -31,73 +16,108 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/page-header";
-import { ScoreBadge } from "@/components/score-badge";
-import { ProgressChart } from "@/components/charts/progress-chart";
-import { PerformanceBars } from "@/components/charts/performance-bars";
+import {
+  CoinsProgress,
+  type ProgressChunk,
+} from "@/components/charts/coins-progress";
+
+function intlLocale(locale: string): string {
+  return locale === "uz" ? "uz-UZ" : locale === "ru" ? "ru-RU" : "en-US";
+}
 
 export default async function StudentDashboard() {
   const session = await requireRole(ROLES.STUDENT);
-  const [me, grades] = await Promise.all([
+  const locale = await getLocale();
+  const now = new Date();
+
+  const [me, coinRecords, recent] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.userId },
-      select: { coins: true, enrolledGroups: { select: { id: true, subjectId: true } } },
+      select: { coins: true, enrolledGroups: { select: { id: true } } },
     }),
-    prisma.grade.findMany({
-      where: { studentId: session.userId },
-      include: { subject: { select: { id: true, name: true } } },
-      orderBy: { date: "desc" },
+    // Every coin change (from lessons) drives the weekly-progress chart.
+    prisma.attendance.findMany({
+      where: { studentId: session.userId, coins: { not: 0 } },
+      select: { coins: true, lesson: { select: { startAt: true } } },
+    }),
+    // The most recent coin gains/losses, with the lesson's date and type.
+    prisma.attendance.findMany({
+      where: { studentId: session.userId, coins: { not: 0 } },
+      select: {
+        id: true,
+        coins: true,
+        lesson: { select: { startAt: true, type: true } },
+      },
+      orderBy: { lesson: { startAt: "desc" } },
+      take: 10,
     }),
   ]);
 
   const t = await getTranslations("student");
   const tc = await getTranslations("common");
-  const tg = await getTranslations("gradeTypes");
-  const locale = await getLocale();
+  const tl = await getTranslations("lessons");
 
-  const gradeLikes = grades.map((g) => ({
-    value: g.value,
-    maxValue: g.maxValue,
-    date: g.date,
-    type: g.type,
-    subjectId: g.subjectId,
-  }));
-  const overall = averagePercent(gradeLikes);
-  const gpa = overallGpa(gradeLikes);
-  const subjectNames = new Map(grades.map((g) => [g.subject.id, g.subject.name]));
-  const subjectSummary = summarizeBySubject(gradeLikes, subjectNames);
-  const trend = monthlyTrend(gradeLikes).map((p) => ({
-    label: p.label,
-    average: p.average,
-  }));
-  const recent = grades.slice(0, 8);
+  const coins = me?.coins ?? 0;
 
-  // Number of subjects the student is enrolled in (independent of grades).
-  const enrolledSubjects = new Set((me?.enrolledGroups ?? []).map((g) => g.subjectId));
-
-  // Rank among the students who share any of this student's classes.
+  // --- Rank in group, by coin balance only ---
   let rank: number | null = null;
   let groupSize = 0;
   const myGroupIds = (me?.enrolledGroups ?? []).map((g) => g.id);
   if (myGroupIds.length) {
-    const groupGrades = await prisma.grade.findMany({
-      where: { student: { enrolledGroups: { some: { id: { in: myGroupIds } } } } },
-      select: { studentId: true, value: true, maxValue: true },
+    const peers = await prisma.user.findMany({
+      where: {
+        role: ROLES.STUDENT,
+        enrolledGroups: { some: { id: { in: myGroupIds } } },
+      },
+      select: { id: true, coins: true },
     });
-    const byStudent = new Map<string, number[]>();
-    for (const g of groupGrades) {
-      const arr = byStudent.get(g.studentId) ?? [];
-      arr.push(toPercent(g.value, g.maxValue));
-      byStudent.set(g.studentId, arr);
-    }
-    const ranked = [...byStudent.entries()]
-      .map(([id, ps]) => ({ id, avg: mean(ps) }))
-      .sort((a, b) => b.avg - a.avg);
+    const ranked = peers.sort((a, b) => b.coins - a.coins);
     groupSize = ranked.length;
     const idx = ranked.findIndex((r) => r.id === session.userId);
     rank = idx >= 0 ? idx + 1 : null;
   }
 
-  const avgAccent = overall >= 80 ? "success" : overall >= 60 ? "primary" : "warning";
+  // --- Weekly coins, split into 3-month chunks from the first lesson to now ---
+  const weekSum = new Map<number, number>();
+  for (const a of coinRecords) {
+    const ws = startOfWeek(a.lesson.startAt).getTime();
+    weekSum.set(ws, (weekSum.get(ws) ?? 0) + a.coins);
+  }
+  const times = coinRecords.map((a) => a.lesson.startAt.getTime());
+  const firstDate = times.length ? new Date(Math.min(...times)) : now;
+
+  const weekLabelFmt = new Intl.DateTimeFormat(intlLocale(locale), {
+    day: "numeric",
+    month: "short",
+  });
+  const monthFmt = new Intl.DateTimeFormat(intlLocale(locale), { month: "short" });
+
+  const chunks: ProgressChunk[] = [];
+  let anchor = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
+  while (anchor.getTime() <= now.getTime()) {
+    const chunkEnd = new Date(anchor.getFullYear(), anchor.getMonth() + 3, 1);
+    const weeks: { label: string; coins: number }[] = [];
+    let ws = startOfWeek(anchor);
+    while (ws.getTime() < chunkEnd.getTime() && ws.getTime() <= now.getTime()) {
+      weeks.push({
+        label: weekLabelFmt.format(ws),
+        coins: weekSum.get(ws.getTime()) ?? 0,
+      });
+      ws = addDays(ws, 7);
+    }
+    if (weeks.length) {
+      const lastMonth = new Date(chunkEnd.getFullYear(), chunkEnd.getMonth() - 1, 1);
+      chunks.push({
+        key: `${anchor.getFullYear()}-${anchor.getMonth()}`,
+        label: `${monthFmt.format(anchor)} – ${monthFmt.format(lastMonth)} ${lastMonth.getFullYear()}`,
+        weeks,
+      });
+    }
+    anchor = chunkEnd;
+  }
+
+  // Coins collected in the current week (a friendly extra stat).
+  const thisWeek = weekSum.get(startOfWeek(now).getTime()) ?? 0;
 
   return (
     <div>
@@ -106,24 +126,12 @@ export default async function StudentDashboard() {
         description={t("welcome", { name: session.name })}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
-          label={t("coins")}
-          value={me?.coins ?? 0}
+          label={t("coinBalance")}
+          value={coins}
           icon={<Coins />}
-          accent="warning"
-        />
-        <StatCard
-          label={t("overallAverage")}
-          value={`${overall}%`}
-          icon={<TrendingUp />}
-          accent={avgAccent}
-        />
-        <StatCard label={t("gpa")} value={gpa.toFixed(2)} icon={<GraduationCap />} />
-        <StatCard
-          label={t("subjectsCount")}
-          value={enrolledSubjects.size || subjectSummary.length}
-          icon={<BookOpen />}
+          accent={coins < 0 ? "danger" : "warning"}
         />
         {rank ? (
           <StatCard
@@ -131,78 +139,70 @@ export default async function StudentDashboard() {
             value={`#${rank}`}
             hint={`/ ${groupSize}`}
             icon={<Trophy />}
-            accent="warning"
+            accent="primary"
           />
         ) : (
-          <StatCard
-            label={t("gradesCount")}
-            value={grades.length}
-            icon={<ClipboardList />}
-          />
+          <StatCard label={t("rank")} value="—" icon={<Trophy />} accent="primary" />
         )}
-      </div>
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>{t("progressTitle")}</CardTitle>
-            <CardDescription>{t("progressSubtitle")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {trend.length ? (
-              <ProgressChart data={trend} />
-            ) : (
-              <EmptyState title={t("noGrades")} icon={<TrendingUp />} />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("subjectsTitle")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {subjectSummary.length ? (
-              <PerformanceBars
-                data={subjectSummary.map((s) => ({ label: s.name, value: s.average }))}
-              />
-            ) : (
-              <EmptyState title={t("noGrades")} icon={<BookOpen />} />
-            )}
-          </CardContent>
-        </Card>
+        <StatCard
+          label={t("coinsThisWeek")}
+          value={thisWeek > 0 ? `+${thisWeek}` : `${thisWeek}`}
+          icon={<Sparkles />}
+          accent="success"
+        />
       </div>
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>{t("recentTitle")}</CardTitle>
+          <CardTitle>{t("progressTitle")}</CardTitle>
+          <CardDescription>{t("progressSubtitle")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {chunks.length ? (
+            <CoinsProgress chunks={chunks} />
+          ) : (
+            <EmptyState title={t("noCoinsYet")} icon={<TrendingUp />} />
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>{t("recentCoinsTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="px-0 pb-0">
           {recent.length ? (
             <Table>
               <THead>
                 <TR>
-                  <TH className="pl-5">{tc("subject")}</TH>
+                  <TH className="pl-5">{tc("date")}</TH>
                   <TH>{tc("type")}</TH>
-                  <TH>{tc("date")}</TH>
-                  <TH className="pr-5 text-right">{tc("grade")}</TH>
+                  <TH className="pr-5 text-right">{tl("coins")}</TH>
                 </TR>
               </THead>
               <TBody>
-                {recent.map((g) => (
-                  <TR key={g.id}>
-                    <TD className="pl-5 font-medium">{g.subject.name}</TD>
-                    <TD>
-                      <Badge variant="outline">{tg(g.type)}</Badge>
+                {recent.map((a) => (
+                  <TR key={a.id}>
+                    <TD className="pl-5 font-medium">
+                      {formatDate(a.lesson.startAt, locale)}
                     </TD>
-                    <TD className="text-muted-foreground">
-                      {formatDate(g.date, locale)}
+                    <TD>
+                      <Badge
+                        variant={a.lesson.type === "EXAM" ? "warning" : "outline"}
+                      >
+                        {tl(a.lesson.type === "EXAM" ? "typeExam" : "typeTypical")}
+                      </Badge>
                     </TD>
                     <TD className="pr-5 text-right">
-                      <ScoreBadge
-                        percent={toPercent(g.value, g.maxValue)}
-                        showLetter={false}
-                      />
+                      <span
+                        className={
+                          a.coins < 0
+                            ? "font-semibold text-destructive"
+                            : "font-semibold text-success"
+                        }
+                      >
+                        {a.coins > 0 ? `+${a.coins}` : a.coins}
+                      </span>
                     </TD>
                   </TR>
                 ))}
@@ -210,7 +210,7 @@ export default async function StudentDashboard() {
             </Table>
           ) : (
             <div className="p-5">
-              <EmptyState title={t("noGrades")} icon={<ClipboardList />} />
+              <EmptyState title={t("noCoinsYet")} icon={<Coins />} />
             </div>
           )}
         </CardContent>

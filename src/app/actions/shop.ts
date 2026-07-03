@@ -85,11 +85,19 @@ export async function deleteProduct(id: string): Promise<ActionState> {
 /* ------------------------------- Orders ------------------------------- */
 
 /**
- * A student places an order: coins are deducted and stock decremented up front.
- * Admins later deliver (fulfil) or reject (refund + restock) it.
+ * A student places an order for one or more units of a product. The only limit
+ * is affordability: a student may order any quantity as long as their balance
+ * covers price × quantity. Coins are deducted and stock reduced by the quantity
+ * up front. Admins later deliver (fulfil) or reject (refund + restock) it.
  */
-export async function placeOrder(productId: string): Promise<ActionState> {
+export async function placeOrder(
+  productId: string,
+  quantity = 1,
+): Promise<ActionState> {
   const session = await requireRole(ROLES.STUDENT);
+
+  const qty = Math.floor(quantity);
+  if (!Number.isFinite(qty) || qty < 1) return { error: "invalid" };
 
   const result = await prisma.$transaction(async (tx) => {
     const [product, student] = await Promise.all([
@@ -97,25 +105,26 @@ export async function placeOrder(productId: string): Promise<ActionState> {
       tx.user.findUnique({ where: { id: session.userId }, select: { coins: true } }),
     ]);
     if (!product || product.disabled) return { error: "invalid" as const };
-    if (product.stock <= 0) return { error: "outOfStock" as const };
-    if (!student || student.coins < product.price) {
+    const total = product.price * qty;
+    if (!student || student.coins < total) {
       return { error: "notEnoughCoins" as const };
     }
 
     await tx.user.update({
       where: { id: session.userId },
-      data: { coins: { decrement: product.price } },
+      data: { coins: { decrement: total } },
     });
     await tx.product.update({
       where: { id: productId },
-      data: { stock: { decrement: 1 } },
+      data: { stock: { decrement: qty } },
     });
     await tx.order.create({
       data: {
         studentId: session.userId,
         productId: product.id,
         productName: product.name,
-        coinsSpent: product.price,
+        quantity: qty,
+        coinsSpent: total,
         status: ORDER_STATUS.PENDING,
       },
     });
@@ -160,7 +169,7 @@ export async function rejectOrder(id: string): Promise<ActionState> {
     if (order.productId) {
       await tx.product.update({
         where: { id: order.productId },
-        data: { stock: { increment: 1 } },
+        data: { stock: { increment: order.quantity } },
       });
     }
     await tx.order.update({

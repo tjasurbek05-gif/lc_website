@@ -161,18 +161,14 @@
   "student": {
     "title": "Mening panelim",
     "welcome": "Xush kelibsiz, {name}",
-    "overallAverage": "Umumiy o'rtacha",
-    "gpa": "O'rtacha ball",
     "coins": "Tangalar",
-    "subjectsCount": "Fanlar",
-    "gradesCount": "Jami baholar",
-    "progressTitle": "Sizning rivojingiz",
-    "progressSubtitle": "Oylik o'rtacha ball",
-    "subjectsTitle": "Fanlar bo'yicha o'zlashtirish",
-    "recentTitle": "So'nggi baholar",
-    "noGrades": "Sizda hali baholar yo'q.",
+    "coinBalance": "Tanga balansi",
+    "coinsThisWeek": "Shu haftadagi tangalar",
     "rank": "Guruhdagi o'rin",
-    "myGradesTitle": "Mening baholarim"
+    "progressTitle": "Sizning rivojingiz",
+    "progressSubtitle": "Har haftada yig'ilgan tangalar, uch oylik davrlar bo'yicha",
+    "recentCoinsTitle": "So'nggi qo'shilgan / ayirilgan tangalar",
+    "noCoinsYet": "Hali tanga yo'q. Tanga ishlashni boshlash uchun darslarga qatnashing!"
   },
   "teacher": {
     "title": "O'qituvchi paneli",
@@ -287,6 +283,8 @@
     "order": "Buyurtma",
     "ordering": "Buyurtma berilmoqda…",
     "notEnough": "Tanga yetarli emas",
+    "quantity": "Soni",
+    "orderPlaced": "Buyurtma qabul qilindi. Mahsulot uchun administratorga murojaat qiling!",
     "myOrders": "Mening buyurtmalarim",
     "statusPending": "Kutilmoqda",
     "statusDelivered": "Berildi",

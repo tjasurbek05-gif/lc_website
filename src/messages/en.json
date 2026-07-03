@@ -161,18 +161,14 @@
   "student": {
     "title": "My Dashboard",
     "welcome": "Welcome, {name}",
-    "overallAverage": "Overall Average",
-    "gpa": "GPA",
     "coins": "Coins",
-    "subjectsCount": "Subjects",
-    "gradesCount": "Total Marks",
-    "progressTitle": "Your progress",
-    "progressSubtitle": "Average score by month",
-    "subjectsTitle": "Performance by subject",
-    "recentTitle": "Recent marks",
-    "noGrades": "You don't have any marks yet.",
+    "coinBalance": "Coin balance",
+    "coinsThisWeek": "Coins this week",
     "rank": "Rank in group",
-    "myGradesTitle": "My Marks"
+    "progressTitle": "Your progress",
+    "progressSubtitle": "Coins collected per week, in three-month periods",
+    "recentCoinsTitle": "Recent coins collected / decreased",
+    "noCoinsYet": "No coins yet. Attend lessons to start earning!"
   },
   "teacher": {
     "title": "Teacher Dashboard",
@@ -287,6 +283,8 @@
     "order": "Order",
     "ordering": "Ordering…",
     "notEnough": "Not enough coins",
+    "quantity": "Quantity",
+    "orderPlaced": "The order has been made. Ask admin for a product!",
     "myOrders": "My orders",
     "statusPending": "Pending",
     "statusDelivered": "Delivered",

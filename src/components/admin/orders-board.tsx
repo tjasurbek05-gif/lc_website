@@ -12,6 +12,7 @@ export type OrderRow = {
   id: string;
   studentName: string;
   productName: string;
+  quantity: number;
   coinsSpent: number;
 };
 
@@ -49,6 +50,7 @@ export function OrdersBoard({ orders }: { orders: OrderRow[] }) {
               <p className="truncate font-medium">{o.studentName}</p>
               <p className="truncate text-sm text-muted-foreground">
                 {o.productName}
+                {o.quantity > 1 ? ` × ${o.quantity}` : ""}
               </p>
             </div>
             <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-sm font-medium text-amber-600 dark:text-amber-400">

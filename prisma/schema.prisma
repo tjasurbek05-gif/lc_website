@@ -195,7 +195,8 @@ model Order {
   product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
   productId   String?
   productName String // snapshot of the product name at order time
-  coinsSpent  Int // coins deducted from the student (refunded on reject)
+  quantity    Int      @default(1) // how many units were ordered
+  coinsSpent  Int // total coins deducted from the student (price × quantity; refunded on reject)
   status      String   @default("PENDING") // "PENDING" | "DELIVERED" | "REJECTED"
   createdAt   DateTime @default(now())
 

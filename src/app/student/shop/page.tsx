@@ -39,6 +39,7 @@ export default async function StudentShopPage() {
   const orderRows = orders.map((o) => ({
     id: o.id,
     productName: o.productName,
+    quantity: o.quantity,
     coinsSpent: o.coinsSpent,
     status: o.status,
     dateLabel: formatDate(o.createdAt, locale),

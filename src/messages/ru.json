@@ -161,18 +161,14 @@
   "student": {
     "title": "Моя панель",
     "welcome": "Добро пожаловать, {name}",
-    "overallAverage": "Общий средний",
-    "gpa": "Средний балл",
     "coins": "Монеты",
-    "subjectsCount": "Предметы",
-    "gradesCount": "Всего оценок",
-    "progressTitle": "Ваш прогресс",
-    "progressSubtitle": "Средний балл по месяцам",
-    "subjectsTitle": "Успеваемость по предметам",
-    "recentTitle": "Последние оценки",
-    "noGrades": "У вас пока нет оценок.",
+    "coinBalance": "Баланс монет",
+    "coinsThisWeek": "Монеты за неделю",
     "rank": "Место в группе",
-    "myGradesTitle": "Мои оценки"
+    "progressTitle": "Ваш прогресс",
+    "progressSubtitle": "Монеты, собранные за неделю, по трёхмесячным периодам",
+    "recentCoinsTitle": "Последние начисления / списания монет",
+    "noCoinsYet": "Пока нет монет. Посещайте занятия, чтобы начать зарабатывать!"
   },
   "teacher": {
     "title": "Панель учителя",
@@ -287,6 +283,8 @@
     "order": "Заказать",
     "ordering": "Оформление…",
     "notEnough": "Недостаточно монет",
+    "quantity": "Количество",
+    "orderPlaced": "Заказ оформлен. Обратитесь к администратору за товаром!",
     "myOrders": "Мои заказы",
     "statusPending": "В ожидании",
     "statusDelivered": "Выдан",

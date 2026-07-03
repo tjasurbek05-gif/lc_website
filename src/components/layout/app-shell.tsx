@@ -6,10 +6,8 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   BookOpen,
-  CalendarDays,
   ClipboardCheck,
   DoorOpen,
-  GraduationCap,
   LayoutDashboard,
   Menu,
   ShoppingBag,
@@ -41,9 +39,7 @@ const NAV: Record<Role, NavItem[]> = {
   ],
   STUDENT: [
     { href: "/student", key: "dashboard", icon: LayoutDashboard },
-    { href: "/student/calendar", key: "calendar", icon: CalendarDays },
-    { href: "/student/grades", key: "myGrades", icon: GraduationCap },
-    { href: "/student/shop", key: "shop", icon: ShoppingBag },
+    { href: "/student/shop", key: "coinShop", icon: ShoppingBag },
   ],
 };
 

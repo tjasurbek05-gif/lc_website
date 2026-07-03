@@ -38,6 +38,7 @@ export default async function AdminDashboard() {
     id: o.id,
     studentName: o.student.name,
     productName: o.productName,
+    quantity: o.quantity,
     coinsSpent: o.coinsSpent,
   }));
 
