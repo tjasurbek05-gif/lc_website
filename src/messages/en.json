@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "LearnCenter",
+    "name": "Brian",
     "tagline": "Track marks. See progress. Grow.",
     "logoAlt": "Company logo"
   },
@@ -262,7 +262,11 @@
     "editProduct": "Edit product",
     "noProducts": "No products yet. Add your first product.",
     "productName": "Product name",
-    "productImage": "Product image (URL)",
+    "productImage": "Product image",
+    "uploadImage": "Upload image",
+    "changeImage": "Change image",
+    "removeImage": "Remove image",
+    "imageHint": "PNG or JPG — resized automatically",
     "productInfo": "Product information",
     "productPrice": "Price (coins)",
     "productStock": "Availability",
@@ -344,6 +348,8 @@
     "coinRange": "Coins are outside the allowed range for this lesson type.",
     "outOfStock": "This product is out of stock.",
     "notEnoughCoins": "You don't have enough coins for this.",
+    "imageType": "Please choose a valid image file.",
+    "imageTooBig": "That image is too large (max 15 MB).",
     "forbidden": "You don't have permission for that."
   }
 }

@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "LearnCenter",
+    "name": "Brian",
     "tagline": "Baholar. Rivoj. O'sish.",
     "logoAlt": "Kompaniya logotipi"
   },
@@ -262,7 +262,11 @@
     "editProduct": "Mahsulotni tahrirlash",
     "noProducts": "Hali mahsulot yo'q. Birinchi mahsulotni qo'shing.",
     "productName": "Mahsulot nomi",
-    "productImage": "Mahsulot rasmi (URL)",
+    "productImage": "Mahsulot rasmi",
+    "uploadImage": "Rasm yuklash",
+    "changeImage": "Rasmni o'zgartirish",
+    "removeImage": "Rasmni olib tashlash",
+    "imageHint": "PNG yoki JPG — o'lchami avtomatik moslashtiriladi",
     "productInfo": "Mahsulot ma'lumoti",
     "productPrice": "Narxi (tanga)",
     "productStock": "Mavjudligi",
@@ -344,6 +348,8 @@
     "coinRange": "Tangalar soni bu dars turi uchun ruxsat etilgan oralig'idan tashqarida.",
     "outOfStock": "Bu mahsulot tugagan.",
     "notEnoughCoins": "Buning uchun tangalaringiz yetarli emas.",
+    "imageType": "Yaroqli rasm faylini tanlang.",
+    "imageTooBig": "Rasm juda katta (maksimal 15 MB).",
     "forbidden": "Sizda bunga ruxsat yo'q."
   }
 }

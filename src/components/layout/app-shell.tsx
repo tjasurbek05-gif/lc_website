@@ -91,7 +91,7 @@ export function AppShell({
         })}
       </nav>
       <div className="border-t border-sidebar-border p-4 text-xs text-sidebar-foreground/50">
-        © {new Date().getFullYear()} LearnCenter
+        © {new Date().getFullYear()} Brian
       </div>
     </div>
   );

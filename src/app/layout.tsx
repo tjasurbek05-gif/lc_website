@@ -22,7 +22,7 @@ const displayGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "LearnCenter — Platform for Learning Centers",
+  title: "Brian — Platform for Learning Centers",
   description:
     "Students see their marks and progress. Teachers grade in seconds. Admins run everything from one place.",
 };

@@ -122,7 +122,7 @@ export default async function LandingPage() {
       <footer className="mt-auto border-t border-border">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-3 px-4 py-8 text-sm text-muted-foreground sm:flex-row sm:px-6">
           <Logo />
-          <p>© {new Date().getFullYear()} LearnCenter. {t("footer")}</p>
+          <p>© {new Date().getFullYear()} Brian. {t("footer")}</p>
         </div>
       </footer>
     </div>

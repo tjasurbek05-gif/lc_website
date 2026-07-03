@@ -1,9 +1,19 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Ban, Check, Coins, Package, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  Ban,
+  Check,
+  Coins,
+  ImagePlus,
+  Package,
+  Pencil,
+  Plus,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +37,32 @@ export type ProductRow = {
   disabled: boolean;
 };
 
+/**
+ * Load an image file, scale it so its longest side is at most `max` px, and
+ * return a compact data URL (WebP where supported, otherwise JPEG). This keeps
+ * inline-stored product images small.
+ */
+async function downscaleImage(file: File, max: number): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  let { width, height } = bitmap;
+  if (width > max || height > max) {
+    const scale = Math.min(max / width, max / height);
+    width = Math.round(width * scale);
+    height = Math.round(height * scale);
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("no 2d context");
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close?.();
+  const webp = canvas.toDataURL("image/webp", 0.82);
+  return webp.startsWith("data:image/webp")
+    ? webp
+    : canvas.toDataURL("image/jpeg", 0.85);
+}
+
 export function ShopManager({
   products,
   initialNew,
@@ -43,16 +79,43 @@ export function ShopManager({
   const [editing, setEditing] = useState<ProductRow | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  // Data-URL of the product image (uploaded + downscaled client-side).
+  const [image, setImage] = useState<string | null>(null);
 
   function openCreate() {
     setEditing(null);
+    setImage(null);
     setError(undefined);
     setOpen(true);
   }
   function openEdit(p: ProductRow) {
     setEditing(p);
+    setImage(p.imageUrl);
     setError(undefined);
     setOpen(true);
+  }
+
+  // Read the chosen file, downscale it to a sensible size and keep it as a
+  // compact data URL so images are stored inline — no URLs to paste.
+  async function onPickImage(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("imageType");
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      setError("imageTooBig");
+      return;
+    }
+    try {
+      const dataUrl = await downscaleImage(file, 640);
+      setImage(dataUrl);
+      setError(undefined);
+    } catch {
+      setError("imageType");
+    }
   }
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
@@ -181,17 +244,46 @@ export function ShopManager({
             <Input id="p-name" name="name" required defaultValue={editing?.name ?? ""} />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="p-image">
+            <Label>
               {t("productImage")}{" "}
               <span className="text-muted-foreground">({tc("optional")})</span>
             </Label>
-            <Input
-              id="p-image"
-              name="imageUrl"
-              type="url"
-              placeholder="https://…"
-              defaultValue={editing?.imageUrl ?? ""}
-            />
+            {/* The image travels with the form as a compact data URL. */}
+            <input type="hidden" name="imageUrl" value={image ?? ""} />
+            <div className="flex items-center gap-3">
+              <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted">
+                {image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={image} alt="" className="size-full object-cover" />
+                ) : (
+                  <Package className="size-7 text-muted-foreground" />
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium hover:bg-muted">
+                  <ImagePlus className="size-4" />
+                  {image ? t("changeImage") : t("uploadImage")}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={onPickImage}
+                  />
+                </label>
+                {image ? (
+                  <button
+                    type="button"
+                    onClick={() => setImage(null)}
+                    className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="size-4" />
+                    {t("removeImage")}
+                  </button>
+                ) : (
+                  <span className="text-xs text-muted-foreground">{t("imageHint")}</span>
+                )}
+              </div>
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="p-info">
