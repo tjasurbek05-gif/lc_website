@@ -140,6 +140,7 @@
     "signingIn": "Вход…",
     "signOut": "Выйти",
     "invalidCredentials": "Неверный номер телефона или пароль",
+    "tooManyAttempts": "Слишком много попыток. Подождите несколько минут и попробуйте снова.",
     "emailPlaceholder": "you@example.com",
     "demoTitle": "Демо-аккаунты",
     "demoHint": "Нажмите на аккаунт, чтобы заполнить форму"

@@ -13,8 +13,20 @@ export type SessionPayload = {
   phone: string;
 };
 
-const secret = process.env.AUTH_SECRET ?? "dev-insecure-secret-change-me";
-const encodedKey = new TextEncoder().encode(secret);
+// AUTH_SECRET must be set in production. Falling back to a hardcoded, publicly
+// known secret there would let anyone forge an admin session cookie, so we fail
+// loudly instead of silently degrading into an auth bypass. A dev-only fallback
+// keeps local `next dev` working without a .env.
+const secret = process.env.AUTH_SECRET;
+if (!secret && process.env.NODE_ENV === "production") {
+  throw new Error(
+    "AUTH_SECRET is not set. Refusing to run: generate a strong secret and set " +
+      "AUTH_SECRET (see .env.example).",
+  );
+}
+const encodedKey = new TextEncoder().encode(
+  secret ?? "dev-insecure-secret-change-me",
+);
 
 export async function signSession(payload: SessionPayload): Promise<string> {
   return new SignJWT({ ...payload })

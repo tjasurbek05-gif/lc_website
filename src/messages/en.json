@@ -140,6 +140,7 @@
     "signingIn": "Signing in…",
     "signOut": "Sign out",
     "invalidCredentials": "Invalid phone number or password",
+    "tooManyAttempts": "Too many attempts. Please wait a few minutes and try again.",
     "emailPlaceholder": "you@example.com",
     "demoTitle": "Demo accounts",
     "demoHint": "Tap an account to fill the form"

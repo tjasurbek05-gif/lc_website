@@ -36,7 +36,7 @@ export const loginSchema = z.object({
 export const userCreateSchema = z.object({
   name: z.string().min(2, "Name is too short"),
   phone: phoneSchema,
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
   role: roleSchema,
 });
 
@@ -49,7 +49,7 @@ export const userUpdateSchema = z.object({
     .string()
     .optional()
     .transform((v) => (v && v.length > 0 ? v : undefined))
-    .pipe(z.string().min(6).optional()),
+    .pipe(z.string().min(8, "Password must be at least 8 characters").optional()),
   role: roleSchema,
   active: z.coerce.boolean().optional(),
 });

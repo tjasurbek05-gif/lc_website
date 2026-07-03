@@ -258,19 +258,27 @@ export async function saveLesson(
   if (!parsed.success) return { error: "invalid" };
   const d = parsed.data;
 
-  if (!(await canManageGroup(d.groupId))) return { error: "forbidden" };
-
   const startAt = combine(d.date, d.startTime);
   const endAt = combine(d.date, d.endTime);
   if (endAt.getTime() <= startAt.getTime()) return { error: "invalidTime" };
 
   try {
     if (d.id) {
+      // Authorize against the lesson's *own* group, not a client-supplied one,
+      // so a teacher can't edit another group's lesson by passing a groupId
+      // they happen to own.
+      const existing = await prisma.lesson.findUnique({
+        where: { id: d.id },
+        select: { groupId: true },
+      });
+      if (!existing) return { error: "invalid" };
+      if (!(await canManageGroup(existing.groupId))) return { error: "forbidden" };
       await prisma.lesson.update({
         where: { id: d.id },
         data: { title: d.title, startAt, endAt, roomId: d.roomId },
       });
     } else {
+      if (!(await canManageGroup(d.groupId))) return { error: "forbidden" };
       await prisma.lesson.create({
         data: {
           groupId: d.groupId,

@@ -23,6 +23,15 @@ function atTime(day: Date, hhmm: string): Date {
 }
 
 async function main() {
+  // Guard: this wipes all data and creates well-known demo accounts (including
+  // an admin with a public password). Never let it run against production.
+  if (process.env.NODE_ENV === "production" && process.env.ALLOW_PROD_SEED !== "true") {
+    throw new Error(
+      "Refusing to seed with NODE_ENV=production. This deletes all data and " +
+        "creates demo accounts. Set ALLOW_PROD_SEED=true only if you are certain.",
+    );
+  }
+
   console.log("Seeding database…");
 
   // Clean slate (respecting FK order). Deleting groups also clears the

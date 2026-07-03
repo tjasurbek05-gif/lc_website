@@ -140,6 +140,7 @@
     "signingIn": "Kirilmoqda…",
     "signOut": "Chiqish",
     "invalidCredentials": "Telefon raqami yoki parol noto'g'ri",
+    "tooManyAttempts": "Urinishlar juda ko'p. Bir necha daqiqadan so'ng qayta urinib ko'ring.",
     "emailPlaceholder": "you@example.com",
     "demoTitle": "Demo hisoblar",
     "demoHint": "Formani to'ldirish uchun hisobni bosing"
