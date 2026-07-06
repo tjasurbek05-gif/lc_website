@@ -1,9 +1,10 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import { Coins, Sparkles, TrendingUp, Trophy } from "lucide-react";
+import { AlertTriangle, Coins, Sparkles, TrendingUp, Trophy, Wallet } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { ROLES } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
-import { addDays, formatDate, startOfWeek } from "@/lib/utils";
+import { paymentStatus } from "@/lib/finance";
+import { addDays, cn, formatCurrency, formatDate, startOfWeek } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -30,7 +31,7 @@ export default async function StudentDashboard() {
   const locale = await getLocale();
   const now = new Date();
 
-  const [me, coinRecords, recent] = await Promise.all([
+  const [me, coinRecords, recent, openPayment] = await Promise.all([
     prisma.user.findUnique({
       where: { id: session.userId },
       select: { coins: true, enrolledGroups: { select: { id: true } } },
@@ -50,6 +51,10 @@ export default async function StudentDashboard() {
       },
       orderBy: { lesson: { startAt: "desc" } },
       take: 10,
+    }),
+    prisma.payment.findFirst({
+      where: { studentId: session.userId, paidAt: null },
+      orderBy: { dueDate: "desc" },
     }),
   ]);
 
@@ -125,6 +130,43 @@ export default async function StudentDashboard() {
         title={t("title")}
         description={t("welcome", { name: session.name })}
       />
+
+      {openPayment ? (
+        (() => {
+          const status = paymentStatus(openPayment, new Date());
+          const overdue = status === "OVERDUE";
+          return (
+            <Card
+              className={cn(
+                "mb-6 flex items-center gap-3 p-4",
+                overdue && "border-destructive/40 bg-destructive/5",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex size-10 shrink-0 items-center justify-center rounded-lg text-white [&_svg]:size-5",
+                  overdue
+                    ? "bg-gradient-to-br from-rose-500 to-pink-500"
+                    : "bg-brand-gradient",
+                )}
+              >
+                {overdue ? <AlertTriangle /> : <Wallet />}
+              </span>
+              <p className="text-sm font-medium">
+                {overdue
+                  ? t("paymentOverdue", {
+                      date: formatDate(openPayment.dueDate, locale),
+                      amount: formatCurrency(openPayment.amount, locale),
+                    })
+                  : t("paymentDue", {
+                      date: formatDate(openPayment.dueDate, locale),
+                      amount: formatCurrency(openPayment.amount, locale),
+                    })}
+              </p>
+            </Card>
+          );
+        })()
+      ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard

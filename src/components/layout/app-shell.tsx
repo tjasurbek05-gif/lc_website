@@ -13,6 +13,7 @@ import {
   ShoppingBag,
   Store,
   Users,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type Role } from "@/lib/constants";
@@ -32,6 +33,7 @@ const NAV: Record<Role, NavItem[]> = {
     { href: "/admin/rooms", key: "rooms", icon: DoorOpen },
     { href: "/admin/shop", key: "coinShop", icon: Store },
     { href: "/admin/reviews", key: "teachersReview", icon: ClipboardCheck },
+    { href: "/admin/finance", key: "finance", icon: Wallet },
   ],
   TEACHER: [
     { href: "/teacher", key: "home", icon: LayoutDashboard },
@@ -40,6 +42,10 @@ const NAV: Record<Role, NavItem[]> = {
   STUDENT: [
     { href: "/student", key: "dashboard", icon: LayoutDashboard },
     { href: "/student/shop", key: "coinShop", icon: ShoppingBag },
+  ],
+  CEO: [
+    { href: "/ceo", key: "dashboard", icon: LayoutDashboard },
+    { href: "/ceo/teachers", key: "teacherPayouts", icon: Wallet },
   ],
 };
 

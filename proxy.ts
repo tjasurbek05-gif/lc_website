@@ -11,6 +11,7 @@ const ROLE_BY_PREFIX: Record<string, string> = {
   "/admin": "ADMIN",
   "/teacher": "TEACHER",
   "/student": "STUDENT",
+  "/ceo": "CEO",
 };
 
 export async function proxy(request: NextRequest) {
@@ -46,5 +47,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/teacher/:path*", "/student/:path*", "/login"],
+  matcher: ["/admin/:path*", "/teacher/:path*", "/student/:path*", "/ceo/:path*", "/login"],
 };

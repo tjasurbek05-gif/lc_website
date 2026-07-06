@@ -8,6 +8,7 @@ import {
   Plus,
   UserPlus,
   Users,
+  Wallet,
 } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { ORDER_STATUS, ROLES } from "@/lib/constants";
@@ -61,6 +62,12 @@ export default async function AdminDashboard() {
       icon: <Plus />,
       tone: "from-fuchsia-500 to-pink-500",
     },
+    {
+      href: "/admin/finance",
+      label: t("openFinance"),
+      icon: <Wallet />,
+      tone: "from-emerald-500 to-teal-500",
+    },
   ];
 
   return (
@@ -68,7 +75,7 @@ export default async function AdminDashboard() {
       <PageHeader title={t("title")} description={t("gettingStarted")} />
 
       {/* Quick actions — the few things an admin needs most often. */}
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {quickActions.map((a) => (
           <Link
             key={a.href}

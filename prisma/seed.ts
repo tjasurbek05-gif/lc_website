@@ -7,6 +7,7 @@ import {
   LESSON_STATUS,
   ROLES,
 } from "@/lib/constants";
+import { addOneMonth } from "@/lib/finance";
 import { addDays, startOfWeek } from "@/lib/utils";
 
 const PASSWORD = "password123";
@@ -39,6 +40,9 @@ async function main() {
   await prisma.order.deleteMany();
   await prisma.product.deleteMany();
   await prisma.roomAssignment.deleteMany();
+  await prisma.payment.deleteMany();
+  await prisma.teacherPayout.deleteMany();
+  await prisma.financeSettings.deleteMany();
   await prisma.attendance.deleteMany();
   await prisma.lesson.deleteMany();
   await prisma.classSchedule.deleteMany();
@@ -69,6 +73,16 @@ async function main() {
       phone: "+998901112201",
       passwordHash,
       role: ROLES.ADMIN,
+    },
+  });
+
+  // --- CEO ---
+  await prisma.user.create({
+    data: {
+      name: "CEO User",
+      phone: "+998901112217",
+      passwordHash,
+      role: ROLES.CEO,
     },
   });
 
@@ -359,11 +373,95 @@ async function main() {
     orderCount++;
   }
 
+  // --- Finance: fixed tuition fee, teacher salaries/payouts, student payments ---
+  const TUITION_FEE = 900_000; // so'm per month, fixed by the administrator
+
+  await prisma.financeSettings.create({
+    data: { id: "singleton", tuitionFee: TUITION_FEE },
+  });
+
+  // Fixed monthly salaries, set by the CEO.
+  const salaryByTeacherKey: Record<string, number> = {
+    sarah: 4_500_000,
+    david: 4_000_000,
+    aziza: 4_200_000,
+  };
+  for (const [key, teacher] of Object.entries(teachers)) {
+    await prisma.user.update({
+      where: { id: teacher.id },
+      data: { salary: salaryByTeacherKey[key] },
+    });
+  }
+
+  // Payouts for the last 2 months are paid; the current month is still pending.
+  let payoutCount = 0;
+  for (const [key, teacher] of Object.entries(teachers)) {
+    const salary = salaryByTeacherKey[key];
+    for (let m = 2; m >= 0; m--) {
+      const periodDate = new Date(now.getFullYear(), now.getMonth() - m, 1);
+      const period = `${periodDate.getFullYear()}-${String(periodDate.getMonth() + 1).padStart(2, "0")}`;
+      const paid = m > 0;
+      await prisma.teacherPayout.create({
+        data: {
+          teacherId: teacher.id,
+          period,
+          amount: salary,
+          paidAt: paid
+            ? new Date(periodDate.getFullYear(), periodDate.getMonth(), randInt(3, 10))
+            : null,
+        },
+      });
+      payoutCount++;
+    }
+  }
+
+  // Rolling monthly tuition cycles per student: a few months of paid history,
+  // then one open cycle — either still upcoming (good standing) or already
+  // overdue. Every 6th student has no history yet (just added, not billed).
+  const allStudents = await prisma.user.findMany({
+    where: { role: ROLES.STUDENT },
+    select: { id: true },
+  });
+  let paymentCount = 0;
+  for (let i = 0; i < allStudents.length; i++) {
+    if (i % 6 === 5) continue; // hasn't started billing yet
+    const studentId = allStudents[i].id;
+
+    const cycles = randInt(2, 5);
+    const overdue = i % 5 === 4;
+    const lastPaidAt = overdue
+      ? addDays(now, -randInt(33, 50)) // missed the ~1-month mark
+      : addDays(now, -randInt(2, 25)); // paid recently, next due date still ahead
+
+    const paidDates: Date[] = [lastPaidAt];
+    for (let c = 1; c < cycles; c++) {
+      paidDates.unshift(addDays(paidDates[0], -30));
+    }
+
+    const rows: { studentId: string; amount: number; dueDate: Date; paidAt: Date | null }[] =
+      paidDates.map((paidAt, idx) => ({
+        studentId,
+        amount: TUITION_FEE,
+        dueDate: idx === 0 ? paidAt : addOneMonth(paidDates[idx - 1]),
+        paidAt,
+      }));
+    rows.push({
+      studentId,
+      amount: TUITION_FEE,
+      dueDate: addOneMonth(lastPaidAt),
+      paidAt: null,
+    });
+
+    await prisma.payment.createMany({ data: rows });
+    paymentCount += rows.length;
+  }
+
   console.log(
-    `Seeded: ${subjectDefs.length} subjects, ${groupDefs.length} classes, 1 admin, ${teacherDefs.length} teachers, ${studentDefs.length} students, ${gradeRows.length} grades, ${roomDefs.length} rooms, ${assignmentCount} room assignments, ${lessonCount} lessons, ${attendanceCount} attendance records, ${productDefs.length} products, ${orderCount} orders.`,
+    `Seeded: ${subjectDefs.length} subjects, ${groupDefs.length} classes, 1 admin, 1 CEO, ${teacherDefs.length} teachers, ${studentDefs.length} students, ${gradeRows.length} grades, ${roomDefs.length} rooms, ${assignmentCount} room assignments, ${lessonCount} lessons, ${attendanceCount} attendance records, ${productDefs.length} products, ${orderCount} orders, ${payoutCount} teacher payouts, ${paymentCount} tuition payments.`,
   );
   console.log("\nDemo logins (password: password123):");
   console.log("  Admin   → +998901112201");
+  console.log("  CEO     → +998901112217");
   console.log("  Teacher → +998901112202");
   console.log("  Student → +998901112203");
 }

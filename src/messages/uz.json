@@ -38,12 +38,14 @@
     "optional": "ixtiyoriy",
     "grade": "Baho",
     "percent": "Foiz",
-    "close": "Yopish"
+    "close": "Yopish",
+    "amount": "Miqdor"
   },
   "roles": {
     "ADMIN": "Administrator",
     "TEACHER": "O'qituvchi",
-    "STUDENT": "O'quvchi"
+    "STUDENT": "O'quvchi",
+    "CEO": "CEO"
   },
   "gradeTypes": {
     "EXAM": "Imtihon",
@@ -68,7 +70,9 @@
     "myClasses": "Mening sinflarim",
     "schedule": "Jadval",
     "calendar": "Kalendar",
-    "shop": "Do'kon"
+    "shop": "Do'kon",
+    "finance": "Moliya",
+    "teacherPayouts": "O'qituvchilar"
   },
   "weekdays": {
     "mon": "Du",
@@ -169,7 +173,17 @@
     "progressTitle": "Sizning rivojingiz",
     "progressSubtitle": "Har haftada yig'ilgan tangalar, uch oylik davrlar bo'yicha",
     "recentCoinsTitle": "So'nggi qo'shilgan / ayirilgan tangalar",
-    "noCoinsYet": "Hali tanga yo'q. Tanga ishlashni boshlash uchun darslarga qatnashing!"
+    "noCoinsYet": "Hali tanga yo'q. Tanga ishlashni boshlash uchun darslarga qatnashing!",
+    "overallAverage": "Umumiy o'rtacha",
+    "gpa": "O'rtacha ball",
+    "subjectsCount": "Fanlar",
+    "gradesCount": "Jami baholar",
+    "subjectsTitle": "Fanlar bo'yicha o'zlashtirish",
+    "recentTitle": "So'nggi baholar",
+    "noGrades": "Sizda hali baholar yo'q.",
+    "myGradesTitle": "Mening baholarim",
+    "paymentDue": "Keyingi o'quv to'lovingiz {amount} {date} sanasida to'lanishi kerak.",
+    "paymentOverdue": "O'quv to'lovi {date} sanasidan beri kechikmoqda. Iltimos, {amount} miqdorini imkon qadar tezroq to'lang."
   },
   "teacher": {
     "title": "O'qituvchi paneli",
@@ -233,7 +247,37 @@
     "deleteSubjectConfirm": "Bu fanni va uning sinflarini o'chirasizmi?",
     "deleteGroupConfirm": "Bu sinfni o'chirasizmi?",
     "passwordKeepHint": "Joriy parolni saqlash uchun bo'sh qoldiring",
-    "membersCount": "{count} o'quvchi"
+    "membersCount": "{count} o'quvchi",
+    "openFinance": "Moliyani ochish",
+    "financeTitle": "Moliya",
+    "financeHint": "O'quvchilarning to'lovlarini kuzating, kim to'laganini belgilang va barchasi uchun bitta belgilangan narxni saqlang.",
+    "fixedFee": "Belgilangan o'quv to'lovi",
+    "editFee": "Narxni tahrirlash",
+    "setFeeTitle": "O'quv to'lovini belgilash",
+    "feeLabel": "Oylik to'lov (so'm)",
+    "studentsPaidUp": "To'lagan",
+    "overdueStudents": "Muddati o'tgan",
+    "revenueThisMonth": "Bu oyda yig'ilgan",
+    "calendarTitle": "To'lovlar taqvimi",
+    "prevMonth": "Oldingi oy",
+    "nextMonth": "Keyingi oy",
+    "thisMonth": "Shu oy",
+    "paymentsTitle": "O'quvchilar to'lovlari",
+    "statusLabel": "Holati",
+    "nextDue": "Keyingi to'lov",
+    "lastPaid": "Oxirgi to'lov",
+    "recordPayment": "To'lovni qayd etish",
+    "recordPaymentTitle": "To'lovni qayd etish",
+    "paidOn": "To'langan sana",
+    "undoPayment": "To'lovni bekor qilish",
+    "undoPaymentConfirm": "Bu o'quvchining oxirgi qayd etilgan to'lovini bekor qilasizmi?",
+    "history": "Tarix",
+    "historyTitle": "To'lovlar tarixi",
+    "noHistory": "Hali to'lovlar qayd etilmagan.",
+    "paidStatus": "To'lagan",
+    "overdueStatus": "Muddati o'tgan",
+    "noPaymentsStatus": "Boshlanmagan",
+    "noStudents": "Hali o'quvchilar yo'q."
   },
   "rooms": {
     "title": "Xonalar",
@@ -352,5 +396,33 @@
     "imageType": "Yaroqli rasm faylini tanlang.",
     "imageTooBig": "Rasm juda katta (maksimal 15 MB).",
     "forbidden": "Sizda bunga ruxsat yo'q."
+  },
+  "ceo": {
+    "title": "CEO paneli",
+    "welcome": "Xush kelibsiz, {name}",
+    "totalStudents": "O'quvchilar",
+    "revenueThisMonth": "Bu oydagi daromad",
+    "totalTeachers": "O'qituvchilar",
+    "payrollThisMonth": "Bu oy to'langan maoshlar",
+    "revenueTrend": "Daromad dinamikasi",
+    "revenueTrendHint": "So'nggi 6 oy davomida yig'ilgan o'quv to'lovlari.",
+    "paymentBreakdown": "To'lov holati",
+    "noRevenue": "Hali daromad qayd etilmagan.",
+    "noStudentsYet": "Hali o'quvchilar yo'q.",
+    "studentsPaid": "To'lagan",
+    "studentsOverdue": "Muddati o'tgan",
+    "notStarted": "Boshlanmagan",
+    "teachersTitle": "O'qituvchilar maoshi",
+    "teachersHint": "Maoshlarni belgilang va oylik to'lovlarni qayd eting.",
+    "salaryLabel": "Oylik maosh (so'm)",
+    "payoutStatus": "Shu oy",
+    "noSalarySet": "Maosh belgilanmagan",
+    "paidThisMonth": "To'langan",
+    "pendingThisMonth": "Kutilmoqda",
+    "setSalary": "Maosh belgilash",
+    "setSalaryTitle": "Oylik maoshni belgilash",
+    "markPaid": "To'landi deb belgilash",
+    "markUnpaid": "To'lanmadi deb belgilash",
+    "noTeachers": "Hali o'qituvchilar yo'q."
   }
 }

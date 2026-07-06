@@ -14,18 +14,22 @@ datasource db {
   provider = "sqlite"
 }
 
-/// Application user. One table for all three roles (ADMIN | TEACHER | STUDENT).
+/// Application user. One table for all four roles (ADMIN | TEACHER | STUDENT | CEO).
 model User {
   id           String  @id @default(cuid())
   name         String
   phone        String  @unique // login identifier (replaces email)
   passwordHash String
-  role         String // "ADMIN" | "TEACHER" | "STUDENT"
+  role         String // "ADMIN" | "TEACHER" | "STUDENT" | "CEO"
   avatarUrl    String?
   active       Boolean @default(true)
 
   // Coin balance (students earn coins from teachers and spend them in the shop).
   coins Int @default(0)
+
+  // Fixed monthly salary for TEACHER accounts, set by the CEO. Unused by
+  // other roles.
+  salary Float?
 
   // Relations.
   // Students are enrolled into groups (classes) — implicit many-to-many. A
@@ -38,6 +42,8 @@ model User {
   attendances     Attendance[]
   orders          Order[]          @relation("StudentOrders")
   roomAssignments RoomAssignment[] @relation("TeacherRoomAssignments")
+  payments        Payment[]        @relation("StudentPayments")
+  payouts         TeacherPayout[]  @relation("TeacherPayouts")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -219,4 +225,54 @@ model RoomAssignment {
 
   @@index([roomId, weekday])
   @@index([teacherId])
+}
+
+/// Center-wide finance configuration. Single row (id = "singleton"). The
+/// tuition fee is fixed by the administrator and applies to every student;
+/// each Payment snapshots the fee in effect when it was recorded so past
+/// cycles stay accurate if the fee later changes.
+model FinanceSettings {
+  id         String   @id @default("singleton")
+  tuitionFee Float    @default(0)
+  updatedAt  DateTime @updatedAt
+}
+
+/// One tuition billing cycle for a student. Cycles are monthly, rolling from
+/// whenever the student last paid: as soon as a payment is recorded, the next
+/// cycle's row is created with dueDate = paidAt + 1 month. `paidAt` is null
+/// until the administrator marks it paid, so a student always has at most one
+/// open (unpaid) cycle — a due-date "overdue" state is derived in the app
+/// layer from `dueDate` vs. today, not stored.
+model Payment {
+  id        String    @id @default(cuid())
+  student   User      @relation("StudentPayments", fields: [studentId], references: [id], onDelete: Cascade)
+  studentId String
+  amount    Float
+  dueDate   DateTime
+  paidAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([studentId])
+  @@index([dueDate])
+  @@index([paidAt])
+}
+
+/// One monthly salary payout for a teacher, tracked by the CEO. `period` is a
+/// "YYYY-MM" label identifying the calendar month being paid.
+model TeacherPayout {
+  id        String    @id @default(cuid())
+  teacher   User      @relation("TeacherPayouts", fields: [teacherId], references: [id], onDelete: Cascade)
+  teacherId String
+  period    String
+  amount    Float
+  paidAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([teacherId, period])
+  @@index([teacherId])
+  @@index([period])
 }
