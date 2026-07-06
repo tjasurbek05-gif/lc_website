@@ -102,3 +102,65 @@ export function revenueForPeriod(
     .filter((p) => p.paidAt && monthPeriod(p.paidAt) === period)
     .reduce((sum, p) => sum + p.amount, 0);
 }
+
+/* --------------------------- Payroll & profit --------------------------- */
+
+export type PayoutLike = { amount: number; period: string; paidAt: Date | string | null };
+
+/** Total salaries actually paid out within a given "YYYY-MM" period. */
+export function payrollForPeriod(payouts: PayoutLike[], period: string): number {
+  return payouts
+    .filter((p) => p.paidAt && p.period === period)
+    .reduce((sum, p) => sum + p.amount, 0);
+}
+
+/** Total salaries paid per period (by the payout's own period), oldest first. */
+export function monthlyPayroll(payouts: PayoutLike[]): RevenuePoint[] {
+  const byMonth = new Map<string, number>();
+  for (const p of payouts) {
+    if (!p.paidAt) continue;
+    byMonth.set(p.period, (byMonth.get(p.period) ?? 0) + p.amount);
+  }
+  return [...byMonth.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, total]) => ({ key, label: periodLabel(key), total }));
+}
+
+export type ProfitPoint = {
+  key: string;
+  label: string;
+  revenue: number;
+  payroll: number;
+  profit: number;
+};
+
+/**
+ * Per-month revenue, salary payroll and net profit (revenue − payroll) across
+ * the union of months that had either revenue or payroll, oldest first. This
+ * is the CEO's cash-based P&L: money collected from students minus salaries
+ * actually paid to teachers.
+ */
+export function monthlyProfit(
+  payments: { amount: number; paidAt: Date | string | null }[],
+  payouts: PayoutLike[],
+): ProfitPoint[] {
+  const revenueByMonth = new Map<string, number>();
+  for (const p of payments) {
+    if (!p.paidAt) continue;
+    const key = monthPeriod(p.paidAt);
+    revenueByMonth.set(key, (revenueByMonth.get(key) ?? 0) + p.amount);
+  }
+  const payrollByMonth = new Map<string, number>();
+  for (const p of payouts) {
+    if (!p.paidAt) continue;
+    payrollByMonth.set(p.period, (payrollByMonth.get(p.period) ?? 0) + p.amount);
+  }
+  const keys = new Set([...revenueByMonth.keys(), ...payrollByMonth.keys()]);
+  return [...keys]
+    .sort((a, b) => a.localeCompare(b))
+    .map((key) => {
+      const revenue = revenueByMonth.get(key) ?? 0;
+      const payroll = payrollByMonth.get(key) ?? 0;
+      return { key, label: periodLabel(key), revenue, payroll, profit: revenue - payroll };
+    });
+}

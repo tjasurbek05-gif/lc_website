@@ -423,6 +423,13 @@
     "setSalaryTitle": "Oylik maoshni belgilash",
     "markPaid": "To'landi deb belgilash",
     "markUnpaid": "To'lanmadi deb belgilash",
-    "noTeachers": "Hali o'qituvchilar yo'q."
+    "noTeachers": "Hali o'qituvchilar yo'q.",
+    "netProfit": "Sof foyda",
+    "netProfitThisMonth": "Bu oydagi sof foyda",
+    "profitTitle": "Foyda va zarar",
+    "profitHint": "O'quvchilardan yig'ilgan pul, o'qituvchilarga to'langan maoshlar chiqarib tashlangan holda, oylik.",
+    "revenueLegend": "Daromad",
+    "payrollLegend": "Maoshlar",
+    "profitLegend": "Sof foyda"
   }
 }

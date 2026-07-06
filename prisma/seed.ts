@@ -380,11 +380,13 @@ async function main() {
     data: { id: "singleton", tuitionFee: TUITION_FEE },
   });
 
-  // Fixed monthly salaries, set by the CEO.
+  // Fixed monthly salaries, set by the CEO. Kept comfortably below the center's
+  // monthly tuition income so the demo tells a profitable-business story
+  // (salaries are ~40% of revenue, like a healthy learning centre).
   const salaryByTeacherKey: Record<string, number> = {
-    sarah: 4_500_000,
-    david: 4_000_000,
-    aziza: 4_200_000,
+    sarah: 1_500_000,
+    david: 1_200_000,
+    aziza: 1_300_000,
   };
   for (const [key, teacher] of Object.entries(teachers)) {
     await prisma.user.update({
@@ -393,11 +395,12 @@ async function main() {
     });
   }
 
-  // Payouts for the last 2 months are paid; the current month is still pending.
+  // Payouts for the last 5 months are paid; the current month is still pending
+  // (the CEO marks it paid from the dashboard).
   let payoutCount = 0;
   for (const [key, teacher] of Object.entries(teachers)) {
     const salary = salaryByTeacherKey[key];
-    for (let m = 2; m >= 0; m--) {
+    for (let m = 5; m >= 0; m--) {
       const periodDate = new Date(now.getFullYear(), now.getMonth() - m, 1);
       const period = `${periodDate.getFullYear()}-${String(periodDate.getMonth() + 1).padStart(2, "0")}`;
       const paid = m > 0;

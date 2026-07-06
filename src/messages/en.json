@@ -423,6 +423,13 @@
     "setSalaryTitle": "Set monthly salary",
     "markPaid": "Mark paid",
     "markUnpaid": "Mark unpaid",
-    "noTeachers": "No teachers yet."
+    "noTeachers": "No teachers yet.",
+    "netProfit": "Net profit",
+    "netProfitThisMonth": "Net profit this month",
+    "profitTitle": "Profit & loss",
+    "profitHint": "Money collected from students minus salaries paid to teachers, each month.",
+    "revenueLegend": "Revenue",
+    "payrollLegend": "Salaries",
+    "profitLegend": "Net profit"
   }
 }

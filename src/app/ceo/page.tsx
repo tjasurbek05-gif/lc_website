@@ -1,11 +1,20 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import { Banknote, GraduationCap, TrendingUp, Users, Wallet } from "lucide-react";
+import {
+  Banknote,
+  GraduationCap,
+  PiggyBank,
+  TrendingUp,
+  Users,
+  Wallet,
+} from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { ROLES } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import {
   currentPeriod,
+  monthlyProfit,
   monthlyRevenue,
+  payrollForPeriod,
   revenueForPeriod,
   studentStandingStatus,
 } from "@/lib/finance";
@@ -22,6 +31,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { StatusPie } from "@/components/charts/status-pie";
 import { RevenueTrend } from "@/components/charts/revenue-trend";
+import { ProfitChart } from "@/components/charts/profit-chart";
 
 export default async function CeoDashboard() {
   const session = await requireRole(ROLES.CEO);
@@ -30,7 +40,7 @@ export default async function CeoDashboard() {
   const now = new Date();
   const period = currentPeriod(now);
 
-  const [students, teachers] = await Promise.all([
+  const [students, teachers, payouts] = await Promise.all([
     prisma.user.findMany({
       where: { role: ROLES.STUDENT },
       select: { id: true, payments: { orderBy: { dueDate: "desc" } } },
@@ -38,6 +48,9 @@ export default async function CeoDashboard() {
     prisma.user.findMany({
       where: { role: ROLES.TEACHER },
       select: { id: true, salary: true, payouts: { where: { period } } },
+    }),
+    prisma.teacherPayout.findMany({
+      select: { amount: true, period: true, paidAt: true },
     }),
   ]);
 
@@ -49,14 +62,15 @@ export default async function CeoDashboard() {
     (s) => studentStandingStatus(s.payments, now) === "OVERDUE",
   ).length;
   const none = students.length - good - overdue;
+
   const revenueThisMonth = revenueForPeriod(allPayments, period);
+  const paidPayroll = payrollForPeriod(payouts, period);
+  const netProfit = revenueThisMonth - paidPayroll;
+
   const trend = monthlyRevenue(allPayments).slice(-6);
+  const profitData = monthlyProfit(allPayments, payouts).slice(-6);
 
   const totalPayroll = teachers.reduce((sum, tch) => sum + (tch.salary ?? 0), 0);
-  const paidPayroll = teachers.reduce((sum, tch) => {
-    const payout = tch.payouts[0];
-    return sum + (payout?.paidAt ? payout.amount : 0);
-  }, 0);
 
   const pieData = [
     { key: "good", label: t("studentsPaid"), value: good, color: "var(--color-success)" },
@@ -73,23 +87,51 @@ export default async function CeoDashboard() {
     <div>
       <PageHeader title={t("title")} description={t("welcome", { name: session.name })} />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard label={t("totalStudents")} value={students.length} icon={<Users />} />
+        <StatCard label={t("totalTeachers")} value={teachers.length} icon={<GraduationCap />} />
         <StatCard
           label={t("revenueThisMonth")}
           value={formatCurrency(revenueThisMonth, locale)}
           icon={<Banknote />}
           accent="success"
         />
-        <StatCard label={t("totalTeachers")} value={teachers.length} icon={<GraduationCap />} />
         <StatCard
           label={t("payrollThisMonth")}
           value={formatCurrency(paidPayroll, locale)}
           hint={`/ ${formatCurrency(totalPayroll, locale)}`}
           icon={<Wallet />}
-          accent={totalPayroll > 0 && paidPayroll >= totalPayroll ? "success" : "warning"}
+          accent="warning"
+        />
+        <StatCard
+          label={t("netProfitThisMonth")}
+          value={formatCurrency(netProfit, locale)}
+          icon={<PiggyBank />}
+          accent={netProfit >= 0 ? "success" : "danger"}
         />
       </div>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>{t("profitTitle")}</CardTitle>
+          <CardDescription>{t("profitHint")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {profitData.length ? (
+            <ProfitChart
+              data={profitData}
+              locale={locale}
+              labels={{
+                revenue: t("revenueLegend"),
+                payroll: t("payrollLegend"),
+                profit: t("profitLegend"),
+              }}
+            />
+          ) : (
+            <EmptyState title={t("noRevenue")} icon={<TrendingUp />} />
+          )}
+        </CardContent>
+      </Card>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
