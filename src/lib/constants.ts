@@ -4,11 +4,12 @@ export const ROLES = {
   ADMIN: "ADMIN",
   TEACHER: "TEACHER",
   STUDENT: "STUDENT",
+  CEO: "CEO",
 } as const;
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
-export const ALL_ROLES: Role[] = [ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT];
+export const ALL_ROLES: Role[] = [ROLES.ADMIN, ROLES.TEACHER, ROLES.STUDENT, ROLES.CEO];
 
 export const GRADE_TYPES = ["EXAM", "QUIZ", "HOMEWORK", "PROJECT"] as const;
 export type GradeType = (typeof GRADE_TYPES)[number];
@@ -50,6 +51,8 @@ export function dashboardPathForRole(role: string): string {
       return "/teacher";
     case ROLES.STUDENT:
       return "/student";
+    case ROLES.CEO:
+      return "/ceo";
     default:
       return "/login";
   }

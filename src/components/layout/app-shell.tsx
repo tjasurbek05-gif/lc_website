@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   Menu,
   Users,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type Role } from "@/lib/constants";
@@ -29,6 +30,7 @@ const NAV: Record<Role, NavItem[]> = {
     { href: "/admin/users", key: "people", icon: Users },
     { href: "/admin/subjects", key: "subjects", icon: BookOpen },
     { href: "/admin/schedule", key: "schedule", icon: CalendarDays },
+    { href: "/admin/finance", key: "finance", icon: Wallet },
   ],
   TEACHER: [
     { href: "/teacher", key: "dashboard", icon: LayoutDashboard },
@@ -39,6 +41,10 @@ const NAV: Record<Role, NavItem[]> = {
     { href: "/student", key: "dashboard", icon: LayoutDashboard },
     { href: "/student/calendar", key: "calendar", icon: CalendarDays },
     { href: "/student/grades", key: "myGrades", icon: GraduationCap },
+  ],
+  CEO: [
+    { href: "/ceo", key: "dashboard", icon: LayoutDashboard },
+    { href: "/ceo/teachers", key: "teacherPayouts", icon: Wallet },
   ],
 };
 

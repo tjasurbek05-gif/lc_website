@@ -30,6 +30,14 @@ export function formatDate(date: Date | string, locale = "en"): string {
   }).format(d);
 }
 
+/** Format an amount as a grouped number with the local currency word (UZS). */
+export function formatCurrency(amount: number, locale = "en"): string {
+  const rounded = Math.round(amount);
+  const grouped = new Intl.NumberFormat(intlLocale(locale)).format(rounded);
+  const suffix = locale === "ru" ? "сум" : "so'm";
+  return `${grouped} ${suffix}`;
+}
+
 /** Format the time part, e.g. "15:00". */
 export function formatTime(date: Date | string, locale = "en"): string {
   const d = typeof date === "string" ? new Date(date) : date;

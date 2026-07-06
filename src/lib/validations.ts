@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // Role / grade-type enums as literal tuples (Zod-friendly).
-export const roleSchema = z.enum(["ADMIN", "TEACHER", "STUDENT"]);
+export const roleSchema = z.enum(["ADMIN", "TEACHER", "STUDENT", "CEO"]);
 export const gradeTypeSchema = z.enum(["EXAM", "QUIZ", "HOMEWORK", "PROJECT"]);
 
 /**
@@ -147,6 +147,28 @@ export const attendanceItemSchema = z.object({
     .optional()
     .nullable()
     .transform((v) => (v && v.trim().length > 0 ? v.trim() : null)),
+});
+
+/* ------------------------------ Finance ----------------------------- */
+
+export const tuitionFeeSchema = z.object({
+  fee: z.coerce.number().min(0, "Must be 0 or more"),
+});
+
+export const recordPaymentSchema = z.object({
+  studentId: z.string().min(1),
+  amount: z.coerce.number().min(0, "Must be 0 or more"),
+  paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date"),
+});
+
+export const teacherSalarySchema = z.object({
+  teacherId: z.string().min(1),
+  salary: z.coerce.number().min(0, "Must be 0 or more"),
+});
+
+export const teacherPayoutSchema = z.object({
+  teacherId: z.string().min(1),
+  period: z.string().regex(/^\d{4}-\d{2}$/, "Invalid period"),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;

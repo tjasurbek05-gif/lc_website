@@ -38,12 +38,14 @@
     "optional": "необязательно",
     "grade": "Оценка",
     "percent": "Процент",
-    "close": "Закрыть"
+    "close": "Закрыть",
+    "amount": "Сумма"
   },
   "roles": {
     "ADMIN": "Администратор",
     "TEACHER": "Учитель",
-    "STUDENT": "Ученик"
+    "STUDENT": "Ученик",
+    "CEO": "CEO"
   },
   "gradeTypes": {
     "EXAM": "Экзамен",
@@ -62,7 +64,9 @@
     "myGrades": "Мои оценки",
     "myClasses": "Мои классы",
     "schedule": "Расписание",
-    "calendar": "Календарь"
+    "calendar": "Календарь",
+    "finance": "Финансы",
+    "teacherPayouts": "Учителя"
   },
   "weekdays": {
     "mon": "Пн",
@@ -165,7 +169,9 @@
     "recentTitle": "Последние оценки",
     "noGrades": "У вас пока нет оценок.",
     "rank": "Место в группе",
-    "myGradesTitle": "Мои оценки"
+    "myGradesTitle": "Мои оценки",
+    "paymentDue": "Следующий платёж за обучение {amount} нужно внести до {date}.",
+    "paymentOverdue": "Платёж за обучение просрочен с {date}. Пожалуйста, оплатите {amount} как можно скорее."
   },
   "teacher": {
     "title": "Панель учителя",
@@ -225,7 +231,37 @@
     "deleteSubjectConfirm": "Удалить этот предмет и его классы?",
     "deleteGroupConfirm": "Удалить этот класс?",
     "passwordKeepHint": "Оставьте пустым, чтобы сохранить текущий пароль",
-    "membersCount": "{count} учеников"
+    "membersCount": "{count} учеников",
+    "openFinance": "Открыть финансы",
+    "financeTitle": "Финансы",
+    "financeHint": "Отслеживайте оплату обучения, отмечайте, кто заплатил, и храните единую фиксированную цену для всех учеников.",
+    "fixedFee": "Фиксированная стоимость обучения",
+    "editFee": "Изменить стоимость",
+    "setFeeTitle": "Установить стоимость обучения",
+    "feeLabel": "Ежемесячная стоимость (сум)",
+    "studentsPaidUp": "Оплачено",
+    "overdueStudents": "Просрочено",
+    "revenueThisMonth": "Собрано в этом месяце",
+    "calendarTitle": "Календарь платежей",
+    "prevMonth": "Предыдущий месяц",
+    "nextMonth": "Следующий месяц",
+    "thisMonth": "Этот месяц",
+    "paymentsTitle": "Оплата учеников",
+    "statusLabel": "Статус",
+    "nextDue": "Следующий платёж",
+    "lastPaid": "Последняя оплата",
+    "recordPayment": "Записать оплату",
+    "recordPaymentTitle": "Записать оплату",
+    "paidOn": "Дата оплаты",
+    "undoPayment": "Отменить оплату",
+    "undoPaymentConfirm": "Отменить последнюю записанную оплату этого ученика?",
+    "history": "История",
+    "historyTitle": "История платежей",
+    "noHistory": "Пока нет записанных платежей.",
+    "paidStatus": "Оплачено",
+    "overdueStatus": "Просрочено",
+    "noPaymentsStatus": "Не начато",
+    "noStudents": "Пока нет учеников."
   },
   "language": {
     "label": "Язык"
@@ -242,5 +278,33 @@
     "invalidTime": "Время окончания должно быть позже начала.",
     "lessonExists": "В это время у этого класса уже есть занятие.",
     "forbidden": "У вас нет прав для этого действия."
+  },
+  "ceo": {
+    "title": "Панель CEO",
+    "welcome": "С возвращением, {name}",
+    "totalStudents": "Ученики",
+    "revenueThisMonth": "Доход в этом месяце",
+    "totalTeachers": "Учителя",
+    "payrollThisMonth": "Выплачено зарплат в этом месяце",
+    "revenueTrend": "Динамика дохода",
+    "revenueTrendHint": "Оплата обучения за последние 6 месяцев.",
+    "paymentBreakdown": "Статус оплаты",
+    "noRevenue": "Пока нет данных о доходе.",
+    "noStudentsYet": "Пока нет учеников.",
+    "studentsPaid": "Оплачено",
+    "studentsOverdue": "Просрочено",
+    "notStarted": "Не начато",
+    "teachersTitle": "Выплаты учителям",
+    "teachersHint": "Установите зарплаты и отмечайте ежемесячные выплаты.",
+    "salaryLabel": "Ежемесячная зарплата (сум)",
+    "payoutStatus": "В этом месяце",
+    "noSalarySet": "Зарплата не установлена",
+    "paidThisMonth": "Выплачено",
+    "pendingThisMonth": "Ожидает",
+    "setSalary": "Установить зарплату",
+    "setSalaryTitle": "Установить ежемесячную зарплату",
+    "markPaid": "Отметить как выплачено",
+    "markUnpaid": "Отметить как невыплачено",
+    "noTeachers": "Пока нет учителей."
   }
 }

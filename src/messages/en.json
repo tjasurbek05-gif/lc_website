@@ -38,12 +38,14 @@
     "optional": "optional",
     "grade": "Grade",
     "percent": "Percent",
-    "close": "Close"
+    "close": "Close",
+    "amount": "Amount"
   },
   "roles": {
     "ADMIN": "Administrator",
     "TEACHER": "Teacher",
-    "STUDENT": "Student"
+    "STUDENT": "Student",
+    "CEO": "CEO"
   },
   "gradeTypes": {
     "EXAM": "Exam",
@@ -62,7 +64,9 @@
     "myGrades": "My Grades",
     "myClasses": "My Classes",
     "schedule": "Schedule",
-    "calendar": "Calendar"
+    "calendar": "Calendar",
+    "finance": "Finance",
+    "teacherPayouts": "Teachers"
   },
   "weekdays": {
     "mon": "Mon",
@@ -165,7 +169,9 @@
     "recentTitle": "Recent marks",
     "noGrades": "You don't have any marks yet.",
     "rank": "Rank in group",
-    "myGradesTitle": "My Marks"
+    "myGradesTitle": "My Marks",
+    "paymentDue": "Your next tuition payment of {amount} is due on {date}.",
+    "paymentOverdue": "Tuition payment overdue since {date}. Please pay {amount} as soon as possible."
   },
   "teacher": {
     "title": "Teacher Dashboard",
@@ -225,7 +231,37 @@
     "deleteSubjectConfirm": "Delete this subject and its classes?",
     "deleteGroupConfirm": "Delete this class?",
     "passwordKeepHint": "Leave blank to keep current password",
-    "membersCount": "{count} students"
+    "membersCount": "{count} students",
+    "openFinance": "Open finance",
+    "financeTitle": "Finance",
+    "financeHint": "Track tuition payments, mark who paid, and keep one fixed price for every student.",
+    "fixedFee": "Fixed tuition fee",
+    "editFee": "Edit fee",
+    "setFeeTitle": "Set tuition fee",
+    "feeLabel": "Monthly fee (so'm)",
+    "studentsPaidUp": "Paid up",
+    "overdueStudents": "Overdue",
+    "revenueThisMonth": "Collected this month",
+    "calendarTitle": "Payment calendar",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "thisMonth": "This month",
+    "paymentsTitle": "Student payments",
+    "statusLabel": "Status",
+    "nextDue": "Next due",
+    "lastPaid": "Last paid",
+    "recordPayment": "Record payment",
+    "recordPaymentTitle": "Record payment",
+    "paidOn": "Paid on",
+    "undoPayment": "Undo payment",
+    "undoPaymentConfirm": "Undo the most recently recorded payment for this student?",
+    "history": "History",
+    "historyTitle": "Payment history",
+    "noHistory": "No payments recorded yet.",
+    "paidStatus": "Paid up",
+    "overdueStatus": "Overdue",
+    "noPaymentsStatus": "Not started",
+    "noStudents": "No students yet."
   },
   "language": {
     "label": "Language"
@@ -242,5 +278,33 @@
     "invalidTime": "The end time must be after the start time.",
     "lessonExists": "There is already a lesson at that time for this class.",
     "forbidden": "You don't have permission for that."
+  },
+  "ceo": {
+    "title": "CEO Dashboard",
+    "welcome": "Welcome back, {name}",
+    "totalStudents": "Students",
+    "revenueThisMonth": "Revenue this month",
+    "totalTeachers": "Teachers",
+    "payrollThisMonth": "Payroll paid this month",
+    "revenueTrend": "Revenue trend",
+    "revenueTrendHint": "Tuition collected over the last 6 months.",
+    "paymentBreakdown": "Payment status",
+    "noRevenue": "No revenue recorded yet.",
+    "noStudentsYet": "No students yet.",
+    "studentsPaid": "Paid up",
+    "studentsOverdue": "Overdue",
+    "notStarted": "Not started",
+    "teachersTitle": "Teacher payouts",
+    "teachersHint": "Set salaries and mark monthly payouts as paid.",
+    "salaryLabel": "Monthly salary (so'm)",
+    "payoutStatus": "This month",
+    "noSalarySet": "No salary set",
+    "paidThisMonth": "Paid",
+    "pendingThisMonth": "Pending",
+    "setSalary": "Set salary",
+    "setSalaryTitle": "Set monthly salary",
+    "markPaid": "Mark paid",
+    "markUnpaid": "Mark unpaid",
+    "noTeachers": "No teachers yet."
   }
 }
