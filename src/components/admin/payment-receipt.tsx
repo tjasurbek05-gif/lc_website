@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Printer, X } from "lucide-react";
+import { useRef, useState } from "react";
+import { FileDown, Printer, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Logo } from "@/components/layout/logo";
@@ -26,6 +26,8 @@ const LABELS: Record<Lang, Record<string, string>> = {
     employee: "Xodim",
     time: "Vaqt",
     print: "Chop etish",
+    savePdf: "PDF saqlash",
+    saving: "Saqlanmoqda…",
     language: "Til",
   },
   ru: {
@@ -44,6 +46,8 @@ const LABELS: Record<Lang, Record<string, string>> = {
     employee: "Сотрудник",
     time: "Время",
     print: "Печать",
+    savePdf: "Сохранить PDF",
+    saving: "Сохранение…",
     language: "Язык",
   },
   en: {
@@ -62,6 +66,8 @@ const LABELS: Record<Lang, Record<string, string>> = {
     employee: "Employee",
     time: "Time",
     print: "Print",
+    savePdf: "Save as PDF",
+    saving: "Saving…",
     language: "Language",
   },
 };
@@ -115,7 +121,31 @@ export function PaymentReceipt({
   onClose: () => void;
 }) {
   const [lang, setLang] = useState<Lang>(defaultLang);
+  const [saving, setSaving] = useState(false);
+  const receiptRef = useRef<HTMLDivElement>(null);
   const t = LABELS[lang];
+
+  async function savePdf() {
+    const el = receiptRef.current;
+    if (!el) return;
+    setSaving(true);
+    try {
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import("html2canvas-pro"),
+        import("jspdf"),
+      ]);
+      const canvas = await html2canvas(el, { scale: 2, backgroundColor: "#ffffff" });
+      const imgData = canvas.toDataURL("image/png");
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      const pdf = new jsPDF({ unit: "px", format: [w, h] });
+      pdf.addImage(imgData, "PNG", 0, 0, w, h);
+      const name = `${t.heading}-${data.receiptNo ?? "cheque"}`.replace(/\s+/g, "_");
+      pdf.save(`${name}.pdf`);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4">
@@ -150,7 +180,10 @@ export function PaymentReceipt({
         </div>
 
         {/* The receipt itself (this is what prints) */}
-        <div className="receipt-print rounded-2xl border border-border bg-white p-6 text-slate-900 shadow-xl">
+        <div
+          ref={receiptRef}
+          className="receipt-print rounded-2xl border border-border bg-white p-6 text-slate-900 shadow-xl"
+        >
           <div className="mb-4 flex flex-col items-center gap-2 border-b border-dashed border-slate-300 pb-4">
             <Logo />
             <p className="text-xs uppercase tracking-wide text-slate-500">{t.heading}</p>
@@ -180,8 +213,12 @@ export function PaymentReceipt({
           </div>
         </div>
 
-        {/* Print button (never printed) */}
-        <div className="receipt-no-print mt-3 flex justify-center">
+        {/* Action buttons (never printed) */}
+        <div className="receipt-no-print mt-3 flex justify-center gap-2">
+          <Button variant="outline" onClick={savePdf} disabled={saving}>
+            <FileDown />
+            {saving ? t.saving : t.savePdf}
+          </Button>
           <Button onClick={() => window.print()}>
             <Printer />
             {t.print}
