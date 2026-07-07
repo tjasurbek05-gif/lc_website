@@ -36,7 +36,7 @@ export default async function AdminFinancePage({
   const daysCount = new Date(year, month + 1, 0).getDate();
   const leadingBlanks = isoWeekday(new Date(year, month, 1)) - 1;
 
-  const [settings, students] = await Promise.all([
+  const [settings, students, teachers] = await Promise.all([
     prisma.financeSettings.findUnique({ where: { id: "singleton" } }),
     prisma.user.findMany({
       where: { role: ROLES.STUDENT },
@@ -46,7 +46,20 @@ export default async function AdminFinancePage({
         name: true,
         phone: true,
         payments: { orderBy: { dueDate: "desc" } },
+        enrolledGroups: {
+          select: {
+            id: true,
+            name: true,
+            subject: { select: { name: true } },
+            teacher: { select: { id: true, name: true } },
+          },
+        },
       },
+    }),
+    prisma.user.findMany({
+      where: { role: ROLES.TEACHER },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
     }),
   ]);
 
@@ -64,6 +77,12 @@ export default async function AdminFinancePage({
       dueAmount: open ? open.amount : null,
       lastPaidAt: lastPaid?.paidAt ? lastPaid.paidAt.toISOString() : null,
       lastAmount: lastPaid ? lastPaid.amount : null,
+      groups: s.enrolledGroups.map((g) => ({
+        id: g.id,
+        label: `${g.subject.name} · ${g.name}`,
+        teacherId: g.teacher?.id ?? null,
+        teacherName: g.teacher?.name ?? null,
+      })),
       history: s.payments
         .filter((p) => p.paidAt)
         .map((p) => ({ id: p.id, amount: p.amount, paidAt: p.paidAt!.toISOString() }))
@@ -108,6 +127,9 @@ export default async function AdminFinancePage({
   return (
     <FinanceManager
       fee={fee}
+      companyName={settings?.companyName ?? "Brian"}
+      branchName={settings?.branchName ?? null}
+      teachers={teachers}
       monthOffset={monthOffset}
       monthLabel={monthLabel}
       leadingBlanks={leadingBlanks}

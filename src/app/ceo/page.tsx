@@ -1,24 +1,28 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import {
   Banknote,
+  Download,
   GraduationCap,
   PiggyBank,
+  TrendingDown,
   TrendingUp,
   Users,
-  Wallet,
 } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { ROLES } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import {
   currentPeriod,
+  expensesForPeriod,
   monthlyProfit,
   monthlyRevenue,
   payrollForPeriod,
   revenueForPeriod,
+  sharesForPeriod,
   studentStandingStatus,
 } from "@/lib/finance";
 import { formatCurrency } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -40,7 +44,7 @@ export default async function CeoDashboard() {
   const now = new Date();
   const period = currentPeriod(now);
 
-  const [students, teachers, payouts] = await Promise.all([
+  const [students, teachers, payouts, expenses] = await Promise.all([
     prisma.user.findMany({
       where: { role: ROLES.STUDENT },
       select: { id: true, payments: { orderBy: { dueDate: "desc" } } },
@@ -52,6 +56,7 @@ export default async function CeoDashboard() {
     prisma.teacherPayout.findMany({
       select: { amount: true, period: true, paidAt: true },
     }),
+    prisma.expense.findMany({ select: { amount: true, date: true } }),
   ]);
 
   const allPayments = students.flatMap((s) => s.payments);
@@ -64,13 +69,14 @@ export default async function CeoDashboard() {
   const none = students.length - good - overdue;
 
   const revenueThisMonth = revenueForPeriod(allPayments, period);
-  const paidPayroll = payrollForPeriod(payouts, period);
-  const netProfit = revenueThisMonth - paidPayroll;
+  const salariesThisMonth = payrollForPeriod(payouts, period);
+  const sharesThisMonth = sharesForPeriod(allPayments, period);
+  const expensesThisMonth = expensesForPeriod(expenses, period);
+  const costThisMonth = salariesThisMonth + sharesThisMonth + expensesThisMonth;
+  const netProfit = revenueThisMonth - costThisMonth;
 
   const trend = monthlyRevenue(allPayments).slice(-6);
-  const profitData = monthlyProfit(allPayments, payouts).slice(-6);
-
-  const totalPayroll = teachers.reduce((sum, tch) => sum + (tch.salary ?? 0), 0);
+  const profitData = monthlyProfit(allPayments, payouts, expenses).slice(-6);
 
   const pieData = [
     { key: "good", label: t("studentsPaid"), value: good, color: "var(--color-success)" },
@@ -85,7 +91,16 @@ export default async function CeoDashboard() {
 
   return (
     <div>
-      <PageHeader title={t("title")} description={t("welcome", { name: session.name })} />
+      <PageHeader
+        title={t("title")}
+        description={t("welcome", { name: session.name })}
+        action={
+          <a href="/ceo/export" className={buttonVariants({ variant: "outline" })}>
+            <Download />
+            {t("downloadExcel")}
+          </a>
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard label={t("totalStudents")} value={students.length} icon={<Users />} />
@@ -97,10 +112,9 @@ export default async function CeoDashboard() {
           accent="success"
         />
         <StatCard
-          label={t("payrollThisMonth")}
-          value={formatCurrency(paidPayroll, locale)}
-          hint={`/ ${formatCurrency(totalPayroll, locale)}`}
-          icon={<Wallet />}
+          label={t("costsThisMonth")}
+          value={formatCurrency(costThisMonth, locale)}
+          icon={<TrendingDown />}
           accent="warning"
         />
         <StatCard
@@ -123,7 +137,7 @@ export default async function CeoDashboard() {
               locale={locale}
               labels={{
                 revenue: t("revenueLegend"),
-                payroll: t("payrollLegend"),
+                cost: t("costLegend"),
                 profit: t("profitLegend"),
               }}
             />

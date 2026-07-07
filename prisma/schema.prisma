@@ -35,15 +35,18 @@ model User {
   // Students are enrolled into groups (classes) — implicit many-to-many. A
   // student may study any number of subjects (2+). A teacher owns the groups
   // they teach via "GroupTeacher".
-  enrolledGroups  Group[]          @relation("GroupStudents")
-  groupsTaught    Group[]          @relation("GroupTeacher")
-  gradesReceived  Grade[]          @relation("StudentGrades")
-  gradesGiven     Grade[]          @relation("TeacherGrades")
-  attendances     Attendance[]
-  orders          Order[]          @relation("StudentOrders")
-  roomAssignments RoomAssignment[] @relation("TeacherRoomAssignments")
-  payments        Payment[]        @relation("StudentPayments")
-  payouts         TeacherPayout[]  @relation("TeacherPayouts")
+  enrolledGroups   Group[]          @relation("GroupStudents")
+  groupsTaught     Group[]          @relation("GroupTeacher")
+  gradesReceived   Grade[]          @relation("StudentGrades")
+  gradesGiven      Grade[]          @relation("TeacherGrades")
+  attendances      Attendance[]
+  orders           Order[]          @relation("StudentOrders")
+  roomAssignments  RoomAssignment[] @relation("TeacherRoomAssignments")
+  payments         Payment[]        @relation("StudentPayments")
+  payouts          TeacherPayout[]  @relation("TeacherPayouts")
+  paymentsRecorded Payment[]        @relation("PaymentRecorder")
+  paymentShares    Payment[]        @relation("PaymentTeacher")
+  expenses         Expense[]        @relation("ExpenseCreator")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -79,6 +82,7 @@ model Group {
   // Scheduling: a weekly timetable and the concrete lessons generated from it.
   schedules ClassSchedule[]
   lessons   Lesson[]
+  payments  Payment[]
 
   createdAt DateTime @default(now())
 
@@ -232,9 +236,11 @@ model RoomAssignment {
 /// each Payment snapshots the fee in effect when it was recorded so past
 /// cycles stay accurate if the fee later changes.
 model FinanceSettings {
-  id         String   @id @default("singleton")
-  tuitionFee Float    @default(0)
-  updatedAt  DateTime @updatedAt
+  id          String   @id @default("singleton")
+  tuitionFee  Float    @default(0)
+  companyName String   @default("Brian") // shown on printed receipts
+  branchName  String? // optional branch/filial name on receipts
+  updatedAt   DateTime @updatedAt
 }
 
 /// One tuition billing cycle for a student. Cycles are monthly, rolling from
@@ -251,12 +257,42 @@ model Payment {
   dueDate   DateTime
   paidAt    DateTime?
 
+  // Receipt details (filled when a payment is actually recorded/paid).
+  method       String  @default("CASH") // "CASH" | "CLICK" | "CARD" | "TRANSFER"
+  receiptNo    Int? // sequential human-facing receipt number
+  group        Group?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  groupId      String?
+  recordedBy   User?   @relation("PaymentRecorder", fields: [recordedById], references: [id], onDelete: SetNull)
+  recordedById String?
+
+  // Optional teacher revenue-share: a percentage of this payment allocated to a
+  // teacher as their earning. teacherShareAmount snapshots amount * pct / 100.
+  teacher            User?   @relation("PaymentTeacher", fields: [teacherId], references: [id], onDelete: SetNull)
+  teacherId          String?
+  teacherSharePct    Float?
+  teacherShareAmount Float?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([studentId])
   @@index([dueDate])
   @@index([paidAt])
+  @@index([teacherId])
+}
+
+/// A free-form business expense logged by the CEO (electricity, gas, rent…).
+/// Subtracted from revenue when computing net profit.
+model Expense {
+  id          String   @id @default(cuid())
+  name        String
+  amount      Float
+  date        DateTime @default(now())
+  createdBy   User?    @relation("ExpenseCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([date])
 }
 
 /// One monthly salary payout for a teacher, tracked by the CEO. `period` is a

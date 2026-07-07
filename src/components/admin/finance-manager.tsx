@@ -7,18 +7,21 @@ import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
   Banknote,
+  Building2,
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   History,
   Pencil,
+  Receipt,
   Undo2,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +30,22 @@ import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
-import { recordPayment, setTuitionFee, undoLastPayment } from "@/app/actions/finance";
+import {
+  getReceiptData,
+  recordPayment,
+  setFinanceInfo,
+  setTuitionFee,
+  undoLastPayment,
+  type ReceiptData,
+} from "@/app/actions/finance";
+import { PaymentReceipt } from "@/components/admin/payment-receipt";
+
+type GroupOption = {
+  id: string;
+  label: string;
+  teacherId: string | null;
+  teacherName: string | null;
+};
 
 export type StudentFinanceRow = {
   id: string;
@@ -38,6 +56,7 @@ export type StudentFinanceRow = {
   dueAmount: number | null;
   lastPaidAt: string | null;
   lastAmount: number | null;
+  groups: GroupOption[];
   history: { id: string; amount: number; paidAt: string }[];
 };
 
@@ -58,13 +77,22 @@ type FinanceStats = {
   revenueThisMonth: number;
 };
 
+const METHODS = ["CASH", "CLICK", "CARD", "TRANSFER"] as const;
+
 function todayInput() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function localeToLang(locale: string): "uz" | "ru" | "en" {
+  return locale === "uz" ? "uz" : locale === "ru" ? "ru" : "en";
+}
+
 export function FinanceManager({
   fee,
+  companyName,
+  branchName,
+  teachers,
   monthOffset,
   monthLabel,
   leadingBlanks,
@@ -76,6 +104,9 @@ export function FinanceManager({
   hint,
 }: {
   fee: number;
+  companyName: string;
+  branchName: string | null;
+  teachers: { id: string; name: string }[];
   monthOffset: number;
   monthLabel: string;
   leadingBlanks: number;
@@ -89,17 +120,31 @@ export function FinanceManager({
   const t = useTranslations("admin");
   const tc = useTranslations("common");
   const te = useTranslations("errors");
+  const tm = useTranslations("methods");
   const pathname = usePathname();
   const router = useRouter();
 
   const [feeOpen, setFeeOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [payOpen, setPayOpen] = useState<StudentFinanceRow | null>(null);
   const [historyOpen, setHistoryOpen] = useState<StudentFinanceRow | null>(null);
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
+  // Controlled fields for the record-payment modal (to preview the split).
+  const [amount, setAmount] = useState<number>(0);
+  const [groupId, setGroupId] = useState<string>("");
+  const [shareTeacherId, setShareTeacherId] = useState<string>("");
+  const [sharePct, setSharePct] = useState<string>("");
+
   const monthHref = (offset: number) => `${pathname}?month=${offset}`;
   const byId = new Map(students.map((s) => [s.id, s]));
+
+  const shareAmount =
+    shareTeacherId && Number(sharePct) > 0
+      ? Math.round((amount * Number(sharePct)) / 100)
+      : 0;
 
   async function onFeeSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -113,6 +158,18 @@ export function FinanceManager({
     } else setError(res?.error);
   }
 
+  async function onInfoSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setPending(true);
+    setError(undefined);
+    const res = await setFinanceInfo({}, new FormData(e.currentTarget));
+    setPending(false);
+    if (res?.ok) {
+      setInfoOpen(false);
+      router.refresh();
+    } else setError(res?.error);
+  }
+
   async function onPaySubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setPending(true);
@@ -122,7 +179,16 @@ export function FinanceManager({
     if (res?.ok) {
       setPayOpen(null);
       router.refresh();
+      if (res.paymentId) {
+        const data = await getReceiptData(res.paymentId);
+        if (data) setReceipt(data);
+      }
     } else setError(res?.error);
+  }
+
+  async function openReceipt(paymentId: string) {
+    const data = await getReceiptData(paymentId);
+    if (data) setReceipt(data);
   }
 
   async function onUndo(row: StudentFinanceRow) {
@@ -133,7 +199,18 @@ export function FinanceManager({
 
   function openPay(row: StudentFinanceRow) {
     setError(undefined);
+    setAmount(row.dueAmount ?? fee);
+    const firstGroup = row.groups[0];
+    setGroupId(firstGroup?.id ?? "");
+    setShareTeacherId(firstGroup?.teacherId ?? "");
+    setSharePct("");
     setPayOpen(row);
+  }
+
+  function onGroupChange(id: string) {
+    setGroupId(id);
+    const g = payOpen?.groups.find((x) => x.id === id);
+    if (g?.teacherId) setShareTeacherId(g.teacherId);
   }
 
   function statusBadge(status: StudentFinanceRow["status"]) {
@@ -148,10 +225,16 @@ export function FinanceManager({
         title={title}
         description={hint}
         action={
-          <Button variant="outline" onClick={() => setFeeOpen(true)}>
-            <Pencil />
-            {t("editFee")}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setInfoOpen(true)}>
+              <Building2 />
+              {t("receiptInfo")}
+            </Button>
+            <Button variant="outline" onClick={() => setFeeOpen(true)}>
+              <Pencil />
+              {t("editFee")}
+            </Button>
+          </div>
         }
       />
 
@@ -323,6 +406,14 @@ export function FinanceManager({
                             <Button
                               size="icon"
                               variant="ghost"
+                              onClick={() => openReceipt(s.history[0].id)}
+                              aria-label={t("receipt")}
+                            >
+                              <Receipt />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
                               onClick={() => setHistoryOpen(s)}
                               aria-label={t("history")}
                             >
@@ -376,6 +467,36 @@ export function FinanceManager({
         </form>
       </Modal>
 
+      {/* Company/branch (receipt info) modal */}
+      <Modal open={infoOpen} onClose={() => setInfoOpen(false)} title={t("receiptInfoTitle")}>
+        <form onSubmit={onInfoSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="companyName">{t("companyName")}</Label>
+            <Input id="companyName" name="companyName" defaultValue={companyName} required />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="branchName">
+              {t("branchName")}{" "}
+              <span className="font-normal text-muted-foreground">({tc("optional")})</span>
+            </Label>
+            <Input id="branchName" name="branchName" defaultValue={branchName ?? ""} />
+          </div>
+          {error ? (
+            <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {te(error)}
+            </p>
+          ) : null}
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" onClick={() => setInfoOpen(false)}>
+              {tc("cancel")}
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? tc("saving") : tc("save")}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
       {/* Record payment modal */}
       <Modal
         open={payOpen !== null}
@@ -386,22 +507,102 @@ export function FinanceManager({
         {payOpen ? (
           <form onSubmit={onPaySubmit} className="space-y-4">
             <input type="hidden" name="studentId" value={payOpen.id} />
-            <div className="space-y-1.5">
-              <Label htmlFor="amount">{tc("amount")}</Label>
-              <Input
-                id="amount"
-                name="amount"
-                type="number"
-                min={0}
-                step={1000}
-                defaultValue={payOpen.dueAmount ?? fee}
-                required
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="amount">{tc("amount")}</Label>
+                <Input
+                  id="amount"
+                  name="amount"
+                  type="number"
+                  min={0}
+                  step={1000}
+                  value={amount}
+                  onChange={(e) => setAmount(Number(e.target.value))}
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="paidAt">{t("paidOn")}</Label>
+                <Input id="paidAt" name="paidAt" type="date" defaultValue={todayInput()} required />
+              </div>
             </div>
+
             <div className="space-y-1.5">
-              <Label htmlFor="paidAt">{t("paidOn")}</Label>
-              <Input id="paidAt" name="paidAt" type="date" defaultValue={todayInput()} required />
+              <Label htmlFor="method">{t("methodLabel")}</Label>
+              <Select id="method" name="method" defaultValue="CASH">
+                {METHODS.map((m) => (
+                  <option key={m} value={m}>
+                    {tm(m)}
+                  </option>
+                ))}
+              </Select>
             </div>
+
+            {payOpen.groups.length ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="groupId">
+                  {t("classLabel")}{" "}
+                  <span className="font-normal text-muted-foreground">({tc("optional")})</span>
+                </Label>
+                <Select
+                  id="groupId"
+                  name="groupId"
+                  value={groupId}
+                  onChange={(e) => onGroupChange(e.target.value)}
+                >
+                  <option value="">{tc("none")}</option>
+                  {payOpen.groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            ) : null}
+
+            {/* Teacher revenue-share */}
+            <div className="rounded-lg border border-border p-3">
+              <p className="mb-2 text-sm font-medium">{t("teacherShareTitle")}</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="teacherId">{t("teacherLabel")}</Label>
+                  <Select
+                    id="teacherId"
+                    name="teacherId"
+                    value={shareTeacherId}
+                    onChange={(e) => setShareTeacherId(e.target.value)}
+                  >
+                    <option value="">{tc("none")}</option>
+                    {teachers.map((tt) => (
+                      <option key={tt.id} value={tt.id}>
+                        {tt.name}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="teacherSharePct">{t("percentLabel")}</Label>
+                  <Input
+                    id="teacherSharePct"
+                    name="teacherSharePct"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    placeholder="0"
+                    value={sharePct}
+                    onChange={(e) => setSharePct(e.target.value)}
+                    disabled={!shareTeacherId}
+                  />
+                </div>
+              </div>
+              {shareAmount > 0 ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {t("teacherGets", { amount: formatCurrency(shareAmount, locale) })}
+                </p>
+              ) : null}
+            </div>
+
             {error ? (
               <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {te(error)}
@@ -412,7 +613,7 @@ export function FinanceManager({
                 {tc("cancel")}
               </Button>
               <Button type="submit" disabled={pending}>
-                {pending ? tc("saving") : tc("save")}
+                {pending ? tc("saving") : t("saveAndReceipt")}
               </Button>
             </div>
           </form>
@@ -432,13 +633,23 @@ export function FinanceManager({
               {historyOpen.history.map((h) => (
                 <div
                   key={h.id}
-                  className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm"
+                  className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm"
                 >
                   <span className="inline-flex items-center gap-1.5 text-muted-foreground">
                     <CalendarDays className="size-3.5" />
                     {formatDate(h.paidAt, locale)}
                   </span>
-                  <span className="font-medium">{formatCurrency(h.amount, locale)}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="font-medium">{formatCurrency(h.amount, locale)}</span>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => openReceipt(h.id)}
+                      aria-label={t("receipt")}
+                    >
+                      <Receipt />
+                    </Button>
+                  </span>
                 </div>
               ))}
             </div>
@@ -447,6 +658,14 @@ export function FinanceManager({
           )
         ) : null}
       </Modal>
+
+      {receipt ? (
+        <PaymentReceipt
+          data={receipt}
+          defaultLang={localeToLang(locale)}
+          onClose={() => setReceipt(null)}
+        />
+      ) : null}
     </div>
   );
 }

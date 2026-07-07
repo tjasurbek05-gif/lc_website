@@ -17,12 +17,12 @@ import { formatCurrency } from "@/lib/utils";
 export type ProfitDatum = {
   label: string;
   revenue: number;
-  payroll: number;
+  cost: number;
   profit: number;
 };
 
 /**
- * CEO profit & loss: grouped bars for revenue (in) and salaries (out) with a
+ * CEO profit & loss: grouped bars for revenue (in) and total cost (out) with a
  * net-profit line drawn on top. Matches the app's themed chart styling.
  */
 export function ProfitChart({
@@ -31,12 +31,12 @@ export function ProfitChart({
   locale = "en",
 }: {
   data: ProfitDatum[];
-  labels: { revenue: string; payroll: string; profit: string };
+  labels: { revenue: string; cost: string; profit: string };
   locale?: string;
 }) {
   const nameByKey: Record<string, string> = {
     revenue: labels.revenue,
-    payroll: labels.payroll,
+    cost: labels.cost,
     profit: labels.profit,
   };
 
@@ -85,7 +85,7 @@ export function ProfitChart({
           wrapperStyle={{ fontSize: 12, color: "var(--color-muted-foreground)" }}
         />
         <Bar dataKey="revenue" fill="var(--color-success)" radius={[6, 6, 0, 0]} maxBarSize={28} />
-        <Bar dataKey="payroll" fill="var(--color-warning)" radius={[6, 6, 0, 0]} maxBarSize={28} />
+        <Bar dataKey="cost" fill="var(--color-warning)" radius={[6, 6, 0, 0]} maxBarSize={28} />
         <Line
           type="monotone"
           dataKey="profit"

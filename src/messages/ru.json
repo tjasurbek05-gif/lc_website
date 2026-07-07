@@ -72,7 +72,8 @@
     "calendar": "Календарь",
     "shop": "Магазин",
     "finance": "Финансы",
-    "teacherPayouts": "Учителя"
+    "teacherPayouts": "Учителя",
+    "expenses": "Расходы"
   },
   "weekdays": {
     "mon": "Пн",
@@ -277,7 +278,19 @@
     "paidStatus": "Оплачено",
     "overdueStatus": "Просрочено",
     "noPaymentsStatus": "Не начато",
-    "noStudents": "Пока нет учеников."
+    "noStudents": "Пока нет учеников.",
+    "receiptInfo": "Данные чека",
+    "receiptInfoTitle": "Информация для чека",
+    "companyName": "Название компании",
+    "branchName": "Филиал",
+    "methodLabel": "Способ оплаты",
+    "classLabel": "Класс",
+    "teacherShareTitle": "Доля учителя (необязательно)",
+    "teacherLabel": "Учитель",
+    "percentLabel": "Процент (%)",
+    "teacherGets": "Учитель получает {amount}",
+    "saveAndReceipt": "Сохранить и чек",
+    "receipt": "Чек"
   },
   "rooms": {
     "title": "Кабинеты",
@@ -427,9 +440,29 @@
     "netProfit": "Чистая прибыль",
     "netProfitThisMonth": "Чистая прибыль за месяц",
     "profitTitle": "Прибыли и убытки",
-    "profitHint": "Деньги, собранные с учеников, за вычетом зарплат учителям, помесячно.",
+    "profitHint": "Деньги, собранные с учеников, за вычетом всех расходов (зарплаты, доли учителей и прочие расходы), помесячно.",
     "revenueLegend": "Доход",
     "payrollLegend": "Зарплаты",
-    "profitLegend": "Чистая прибыль"
+    "profitLegend": "Чистая прибыль",
+    "costsThisMonth": "Расходы за месяц",
+    "costLegend": "Расходы",
+    "fromPayments": "С оплат",
+    "downloadExcel": "Скачать Excel",
+    "expensesTitle": "Расходы",
+    "expensesHint": "Учитывайте прочие расходы — аренда, электричество, газ и другое.",
+    "addExpense": "Добавить расход",
+    "addExpenseTitle": "Добавить расход",
+    "expenseName": "Расход",
+    "expensePlaceholder": "напр. Электричество",
+    "expensesThisMonth": "Расходы за месяц",
+    "expensesAllTime": "Всего расходов",
+    "noExpenses": "Расходы ещё не добавлены.",
+    "deleteExpenseConfirm": "Удалить этот расход?"
+  },
+  "methods": {
+    "CASH": "Наличные",
+    "CLICK": "Click",
+    "CARD": "Карта",
+    "TRANSFER": "Перевод"
   }
 }

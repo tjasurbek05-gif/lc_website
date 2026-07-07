@@ -126,41 +126,92 @@ export function monthlyPayroll(payouts: PayoutLike[]): RevenuePoint[] {
     .map(([key, total]) => ({ key, label: periodLabel(key), total }));
 }
 
+export type PaymentShareLike = {
+  amount: number;
+  paidAt: Date | string | null;
+  teacherShareAmount?: number | null;
+};
+export type ExpenseLike = { amount: number; date: Date | string };
+
+/** Teacher revenue-shares paid out within a given period (by payment paidAt). */
+export function sharesForPeriod(payments: PaymentShareLike[], period: string): number {
+  return payments
+    .filter((p) => p.paidAt && p.teacherShareAmount && monthPeriod(p.paidAt) === period)
+    .reduce((sum, p) => sum + (p.teacherShareAmount ?? 0), 0);
+}
+
+/** Free-form business expenses logged within a given period (by expense date). */
+export function expensesForPeriod(expenses: ExpenseLike[], period: string): number {
+  return expenses
+    .filter((e) => monthPeriod(e.date) === period)
+    .reduce((sum, e) => sum + e.amount, 0);
+}
+
 export type ProfitPoint = {
   key: string;
   label: string;
   revenue: number;
-  payroll: number;
+  salaries: number;
+  shares: number;
+  expenses: number;
+  cost: number;
   profit: number;
 };
 
 /**
- * Per-month revenue, salary payroll and net profit (revenue − payroll) across
- * the union of months that had either revenue or payroll, oldest first. This
- * is the CEO's cash-based P&L: money collected from students minus salaries
- * actually paid to teachers.
+ * Per-month cash-based P&L across the union of months that had any activity,
+ * oldest first: revenue collected from students, minus total costs (teacher
+ * salaries paid + teacher revenue-shares + other business expenses). Net
+ * profit is revenue − cost.
  */
 export function monthlyProfit(
-  payments: { amount: number; paidAt: Date | string | null }[],
+  payments: PaymentShareLike[],
   payouts: PayoutLike[],
+  expenses: ExpenseLike[] = [],
 ): ProfitPoint[] {
   const revenueByMonth = new Map<string, number>();
+  const sharesByMonth = new Map<string, number>();
   for (const p of payments) {
     if (!p.paidAt) continue;
     const key = monthPeriod(p.paidAt);
     revenueByMonth.set(key, (revenueByMonth.get(key) ?? 0) + p.amount);
+    if (p.teacherShareAmount) {
+      sharesByMonth.set(key, (sharesByMonth.get(key) ?? 0) + p.teacherShareAmount);
+    }
   }
-  const payrollByMonth = new Map<string, number>();
+  const salariesByMonth = new Map<string, number>();
   for (const p of payouts) {
     if (!p.paidAt) continue;
-    payrollByMonth.set(p.period, (payrollByMonth.get(p.period) ?? 0) + p.amount);
+    salariesByMonth.set(p.period, (salariesByMonth.get(p.period) ?? 0) + p.amount);
   }
-  const keys = new Set([...revenueByMonth.keys(), ...payrollByMonth.keys()]);
+  const expensesByMonth = new Map<string, number>();
+  for (const e of expenses) {
+    const key = monthPeriod(e.date);
+    expensesByMonth.set(key, (expensesByMonth.get(key) ?? 0) + e.amount);
+  }
+  const keys = new Set([
+    ...revenueByMonth.keys(),
+    ...salariesByMonth.keys(),
+    ...sharesByMonth.keys(),
+    ...expensesByMonth.keys(),
+  ]);
   return [...keys]
     .sort((a, b) => a.localeCompare(b))
     .map((key) => {
       const revenue = revenueByMonth.get(key) ?? 0;
-      const payroll = payrollByMonth.get(key) ?? 0;
-      return { key, label: periodLabel(key), revenue, payroll, profit: revenue - payroll };
+      const salaries = salariesByMonth.get(key) ?? 0;
+      const shares = sharesByMonth.get(key) ?? 0;
+      const expensesTotal = expensesByMonth.get(key) ?? 0;
+      const cost = salaries + shares + expensesTotal;
+      return {
+        key,
+        label: periodLabel(key),
+        revenue,
+        salaries,
+        shares,
+        expenses: expensesTotal,
+        cost,
+        profit: revenue - cost,
+      };
     });
 }

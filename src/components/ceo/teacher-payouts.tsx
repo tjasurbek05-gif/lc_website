@@ -23,6 +23,7 @@ export type TeacherRow = {
   phone: string;
   salary: number;
   paidAt: string | null;
+  sharesThisMonth: number;
 };
 
 export function TeacherPayouts({
@@ -81,6 +82,7 @@ export function TeacherPayouts({
                 <TR>
                   <TH className="pl-5">{tc("name")}</TH>
                   <TH>{t("salaryLabel")}</TH>
+                  <TH>{t("fromPayments")}</TH>
                   <TH>{t("payoutStatus")}</TH>
                   <TH className="pr-5 text-right">{tc("actions")}</TH>
                 </TR>
@@ -102,6 +104,15 @@ export function TeacherPayouts({
                         formatCurrency(row.salary, locale)
                       ) : (
                         <span className="text-muted-foreground">{t("noSalarySet")}</span>
+                      )}
+                    </TD>
+                    <TD>
+                      {row.sharesThisMonth > 0 ? (
+                        <span className="font-medium text-success">
+                          {formatCurrency(row.sharesThisMonth, locale)}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
                       )}
                     </TD>
                     <TD>

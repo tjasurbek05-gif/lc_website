@@ -72,7 +72,8 @@
     "calendar": "Kalendar",
     "shop": "Do'kon",
     "finance": "Moliya",
-    "teacherPayouts": "O'qituvchilar"
+    "teacherPayouts": "O'qituvchilar",
+    "expenses": "Xarajatlar"
   },
   "weekdays": {
     "mon": "Du",
@@ -277,7 +278,19 @@
     "paidStatus": "To'lagan",
     "overdueStatus": "Muddati o'tgan",
     "noPaymentsStatus": "Boshlanmagan",
-    "noStudents": "Hali o'quvchilar yo'q."
+    "noStudents": "Hali o'quvchilar yo'q.",
+    "receiptInfo": "Chek ma'lumoti",
+    "receiptInfoTitle": "Chek ma'lumotlari",
+    "companyName": "Kompaniya nomi",
+    "branchName": "Filial",
+    "methodLabel": "To'lov usuli",
+    "classLabel": "Sinf",
+    "teacherShareTitle": "O'qituvchi ulushi (ixtiyoriy)",
+    "teacherLabel": "O'qituvchi",
+    "percentLabel": "Foiz (%)",
+    "teacherGets": "O'qituvchi oladi: {amount}",
+    "saveAndReceipt": "Saqlash va chek",
+    "receipt": "Chek"
   },
   "rooms": {
     "title": "Xonalar",
@@ -427,9 +440,29 @@
     "netProfit": "Sof foyda",
     "netProfitThisMonth": "Bu oydagi sof foyda",
     "profitTitle": "Foyda va zarar",
-    "profitHint": "O'quvchilardan yig'ilgan pul, o'qituvchilarga to'langan maoshlar chiqarib tashlangan holda, oylik.",
+    "profitHint": "O'quvchilardan yig'ilgan pul, barcha xarajatlar (maoshlar, o'qituvchi ulushlari va xarajatlar) chiqarilgan holda, oylik.",
     "revenueLegend": "Daromad",
     "payrollLegend": "Maoshlar",
-    "profitLegend": "Sof foyda"
+    "profitLegend": "Sof foyda",
+    "costsThisMonth": "Bu oydagi xarajatlar",
+    "costLegend": "Xarajatlar",
+    "fromPayments": "To'lovlardan",
+    "downloadExcel": "Excel yuklab olish",
+    "expensesTitle": "Xarajatlar",
+    "expensesHint": "Boshqa xarajatlarni yozing — ijara, elektr, gaz va boshqalar.",
+    "addExpense": "Xarajat qo'shish",
+    "addExpenseTitle": "Xarajat qo'shish",
+    "expenseName": "Xarajat",
+    "expensePlaceholder": "masalan, Elektr",
+    "expensesThisMonth": "Bu oydagi xarajatlar",
+    "expensesAllTime": "Jami xarajatlar",
+    "noExpenses": "Hali xarajatlar yo'q.",
+    "deleteExpenseConfirm": "Bu xarajatni o'chirasizmi?"
+  },
+  "methods": {
+    "CASH": "Naqd",
+    "CLICK": "Click",
+    "CARD": "Karta",
+    "TRANSFER": "O'tkazma"
   }
 }

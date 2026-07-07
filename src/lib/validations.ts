@@ -216,10 +216,45 @@ export const tuitionFeeSchema = z.object({
   fee: z.coerce.number().min(0, "Must be 0 or more"),
 });
 
+export const financeInfoSchema = z.object({
+  companyName: z.string().trim().min(1, "Company name is required").max(80),
+  branchName: z
+    .string()
+    .trim()
+    .optional()
+    .nullable()
+    .transform((v) => (v && v.length > 0 ? v : null)),
+});
+
+export const paymentMethodSchema = z.enum(["CASH", "CLICK", "CARD", "TRANSFER"]);
+
 export const recordPaymentSchema = z.object({
   studentId: z.string().min(1),
   amount: z.coerce.number().min(0, "Must be 0 or more"),
   paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date"),
+  method: paymentMethodSchema.default("CASH"),
+  groupId: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v && v.length > 0 ? v : null)),
+  teacherId: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v && v.length > 0 ? v : null)),
+  teacherSharePct: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v && v.trim().length > 0 ? Number(v) : null))
+    .pipe(z.number().min(0).max(100).nullable()),
+});
+
+export const expenseSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(120),
+  amount: z.coerce.number().min(0, "Must be 0 or more"),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date"),
 });
 
 export const teacherSalarySchema = z.object({

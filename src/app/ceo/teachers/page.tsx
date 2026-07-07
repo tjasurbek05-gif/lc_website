@@ -2,7 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { requireRole } from "@/lib/auth";
 import { ROLES } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
-import { currentPeriod } from "@/lib/finance";
+import { currentPeriod, monthPeriod } from "@/lib/finance";
 import { TeacherPayouts, type TeacherRow } from "@/components/ceo/teacher-payouts";
 
 function periodLabelFor(period: string, locale: string) {
@@ -27,6 +27,10 @@ export default async function CeoTeachersPage() {
       phone: true,
       salary: true,
       payouts: { where: { period } },
+      paymentShares: {
+        where: { paidAt: { not: null }, teacherShareAmount: { not: null } },
+        select: { teacherShareAmount: true, paidAt: true },
+      },
     },
   });
 
@@ -36,6 +40,9 @@ export default async function CeoTeachersPage() {
     phone: tch.phone,
     salary: tch.salary ?? 0,
     paidAt: tch.payouts[0]?.paidAt ? tch.payouts[0].paidAt.toISOString() : null,
+    sharesThisMonth: tch.paymentShares
+      .filter((s) => s.paidAt && monthPeriod(s.paidAt) === period)
+      .reduce((sum, s) => sum + (s.teacherShareAmount ?? 0), 0),
   }));
 
   return (

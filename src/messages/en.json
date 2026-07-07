@@ -72,7 +72,8 @@
     "calendar": "Calendar",
     "shop": "Shop",
     "finance": "Finance",
-    "teacherPayouts": "Teachers"
+    "teacherPayouts": "Teachers",
+    "expenses": "Expenses"
   },
   "weekdays": {
     "mon": "Mon",
@@ -277,7 +278,19 @@
     "paidStatus": "Paid up",
     "overdueStatus": "Overdue",
     "noPaymentsStatus": "Not started",
-    "noStudents": "No students yet."
+    "noStudents": "No students yet.",
+    "receiptInfo": "Receipt info",
+    "receiptInfoTitle": "Receipt information",
+    "companyName": "Company name",
+    "branchName": "Branch name",
+    "methodLabel": "Payment method",
+    "classLabel": "Class",
+    "teacherShareTitle": "Teacher share (optional)",
+    "teacherLabel": "Teacher",
+    "percentLabel": "Percent (%)",
+    "teacherGets": "Teacher gets {amount}",
+    "saveAndReceipt": "Save & receipt",
+    "receipt": "Receipt"
   },
   "rooms": {
     "title": "Rooms",
@@ -427,9 +440,29 @@
     "netProfit": "Net profit",
     "netProfitThisMonth": "Net profit this month",
     "profitTitle": "Profit & loss",
-    "profitHint": "Money collected from students minus salaries paid to teachers, each month.",
+    "profitHint": "Money collected from students minus all costs (salaries, teacher shares and expenses), each month.",
     "revenueLegend": "Revenue",
     "payrollLegend": "Salaries",
-    "profitLegend": "Net profit"
+    "profitLegend": "Net profit",
+    "costsThisMonth": "Costs this month",
+    "costLegend": "Costs",
+    "fromPayments": "From payments",
+    "downloadExcel": "Download Excel",
+    "expensesTitle": "Expenses",
+    "expensesHint": "Log other business costs — rent, electricity, gas and more.",
+    "addExpense": "Add expense",
+    "addExpenseTitle": "Add expense",
+    "expenseName": "Expense",
+    "expensePlaceholder": "e.g. Electricity",
+    "expensesThisMonth": "Expenses this month",
+    "expensesAllTime": "Total expenses",
+    "noExpenses": "No expenses logged yet.",
+    "deleteExpenseConfirm": "Delete this expense?"
+  },
+  "methods": {
+    "CASH": "Cash",
+    "CLICK": "Click",
+    "CARD": "Card",
+    "TRANSFER": "Transfer"
   }
 }

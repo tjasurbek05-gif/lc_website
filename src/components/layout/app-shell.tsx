@@ -10,6 +10,7 @@ import {
   DoorOpen,
   LayoutDashboard,
   Menu,
+  Receipt,
   ShoppingBag,
   Store,
   Users,
@@ -46,6 +47,7 @@ const NAV: Record<Role, NavItem[]> = {
   CEO: [
     { href: "/ceo", key: "dashboard", icon: LayoutDashboard },
     { href: "/ceo/teachers", key: "teacherPayouts", icon: Wallet },
+    { href: "/ceo/expenses", key: "expenses", icon: Receipt },
   ],
 };
 
