@@ -39,7 +39,9 @@
     "grade": "Baho",
     "percent": "Foiz",
     "close": "Yopish",
-    "amount": "Miqdor"
+    "amount": "Miqdor",
+    "searchByNamePhone": "Ism yoki telefon bo'yicha qidirish…",
+    "noResults": "Hech narsa topilmadi."
   },
   "roles": {
     "ADMIN": "Administrator",
@@ -457,7 +459,8 @@
     "expensesThisMonth": "Bu oydagi xarajatlar",
     "expensesAllTime": "Jami xarajatlar",
     "noExpenses": "Hali xarajatlar yo'q.",
-    "deleteExpenseConfirm": "Bu xarajatni o'chirasizmi?"
+    "deleteExpenseConfirm": "Bu xarajatni o'chirasizmi?",
+    "downloading": "Yuklanmoqda…"
   },
   "methods": {
     "CASH": "Naqd",

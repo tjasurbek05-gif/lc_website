@@ -39,7 +39,9 @@
     "grade": "Grade",
     "percent": "Percent",
     "close": "Close",
-    "amount": "Amount"
+    "amount": "Amount",
+    "searchByNamePhone": "Search by name or phone…",
+    "noResults": "No matches found."
   },
   "roles": {
     "ADMIN": "Administrator",
@@ -457,7 +459,8 @@
     "expensesThisMonth": "Expenses this month",
     "expensesAllTime": "Total expenses",
     "noExpenses": "No expenses logged yet.",
-    "deleteExpenseConfirm": "Delete this expense?"
+    "deleteExpenseConfirm": "Delete this expense?",
+    "downloading": "Downloading…"
   },
   "methods": {
     "CASH": "Cash",

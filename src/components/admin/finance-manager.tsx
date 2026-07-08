@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -15,6 +15,7 @@ import {
   History,
   Pencil,
   Receipt,
+  Search,
   Undo2,
   Users,
 } from "lucide-react";
@@ -131,6 +132,7 @@ export function FinanceManager({
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const [query, setQuery] = useState("");
 
   // Controlled fields for the record-payment modal (to preview the split).
   const [amount, setAmount] = useState<number>(0);
@@ -140,6 +142,14 @@ export function FinanceManager({
 
   const monthHref = (offset: number) => `${pathname}?month=${offset}`;
   const byId = new Map(students.map((s) => [s.id, s]));
+
+  const filteredStudents = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return students;
+    return students.filter(
+      (s) => s.name.toLowerCase().includes(q) || s.phone.toLowerCase().includes(q),
+    );
+  }, [students, query]);
 
   const shareAmount =
     shareTeacherId && Number(sharePct) > 0
@@ -344,10 +354,29 @@ export function FinanceManager({
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>{t("paymentsTitle")}</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle>{t("paymentsTitle")}</CardTitle>
+            <div className="relative w-full max-w-xs">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={tc("searchByNamePhone")}
+                className="h-9 pl-9"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="px-0 pb-0">
-          {students.length ? (
+          {students.length === 0 ? (
+            <div className="p-5">
+              <EmptyState title={t("noStudents")} icon={<Users />} />
+            </div>
+          ) : filteredStudents.length === 0 ? (
+            <div className="p-5">
+              <EmptyState title={tc("noResults")} />
+            </div>
+          ) : (
             <Table>
               <THead>
                 <TR>
@@ -359,7 +388,7 @@ export function FinanceManager({
                 </TR>
               </THead>
               <TBody>
-                {students.map((s) => (
+                {filteredStudents.map((s) => (
                   <TR key={s.id}>
                     <TD className="pl-5">
                       <div className="min-w-0">
@@ -436,10 +465,6 @@ export function FinanceManager({
                 ))}
               </TBody>
             </Table>
-          ) : (
-            <div className="p-5">
-              <EmptyState title={t("noStudents")} icon={<Users />} />
-            </div>
           )}
         </CardContent>
       </Card>

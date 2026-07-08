@@ -1,7 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import {
   Banknote,
-  Download,
   GraduationCap,
   PiggyBank,
   TrendingDown,
@@ -22,7 +21,7 @@ import {
   studentStandingStatus,
 } from "@/lib/finance";
 import { formatCurrency } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
+import { ExportButton } from "@/components/ceo/export-button";
 import {
   Card,
   CardContent,
@@ -94,12 +93,7 @@ export default async function CeoDashboard() {
       <PageHeader
         title={t("title")}
         description={t("welcome", { name: session.name })}
-        action={
-          <a href="/ceo/export" className={buttonVariants({ variant: "outline" })}>
-            <Download />
-            {t("downloadExcel")}
-          </a>
-        }
+        action={<ExportButton label={t("downloadExcel")} downloadingLabel={t("downloading")} />}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">

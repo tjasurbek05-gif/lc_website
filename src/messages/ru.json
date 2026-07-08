@@ -39,7 +39,9 @@
     "grade": "Оценка",
     "percent": "Процент",
     "close": "Закрыть",
-    "amount": "Сумма"
+    "amount": "Сумма",
+    "searchByNamePhone": "Поиск по имени или телефону…",
+    "noResults": "Совпадений не найдено."
   },
   "roles": {
     "ADMIN": "Администратор",
@@ -457,7 +459,8 @@
     "expensesThisMonth": "Расходы за месяц",
     "expensesAllTime": "Всего расходов",
     "noExpenses": "Расходы ещё не добавлены.",
-    "deleteExpenseConfirm": "Удалить этот расход?"
+    "deleteExpenseConfirm": "Удалить этот расход?",
+    "downloading": "Загрузка…"
   },
   "methods": {
     "CASH": "Наличные",

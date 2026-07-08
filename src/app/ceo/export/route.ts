@@ -4,6 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { ROLES } from "@/lib/constants";
 import { monthlyProfit, periodLabel } from "@/lib/finance";
 
+// This always reads live data — never cache the route or its response.
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+export const revalidate = 0;
+
 const MONEY_FMT = "#,##0";
 const DATE_FMT = "dd.mm.yyyy";
 
@@ -143,7 +148,8 @@ export async function GET() {
       "Content-Type":
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "Content-Disposition": `attachment; filename="${filename}"`,
-      "Cache-Control": "no-store",
+      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+      Pragma: "no-cache",
     },
   });
 }

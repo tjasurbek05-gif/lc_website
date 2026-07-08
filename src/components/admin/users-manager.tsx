@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Avatar } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { ALL_ROLES, ROLES } from "@/lib/constants";
 import { deleteUser, saveUser } from "@/app/actions/admin";
@@ -57,6 +58,15 @@ export function UsersManager({
   const [role, setRole] = useState<string>(() => roleFromNew(initialNewRole));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const [query, setQuery] = useState("");
+
+  const filteredUsers = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter(
+      (u) => u.name.toLowerCase().includes(q) || u.phone.toLowerCase().includes(q),
+    );
+  }, [users, query]);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -103,8 +113,23 @@ export function UsersManager({
         </Button>
       </div>
 
+      <div className="relative mb-4 max-w-sm">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={tc("searchByNamePhone")}
+          className="pl-9"
+        />
+      </div>
+
       <Card>
         <CardContent className="px-0 py-0">
+          {filteredUsers.length === 0 ? (
+            <div className="p-5">
+              <EmptyState title={tc("noResults")} />
+            </div>
+          ) : (
           <Table>
             <THead>
               <TR>
@@ -115,7 +140,7 @@ export function UsersManager({
               </TR>
             </THead>
             <TBody>
-              {users.map((u) => (
+              {filteredUsers.map((u) => (
                 <TR key={u.id}>
                   <TD className="pl-5">
                     <div className="flex items-center gap-3">
@@ -152,6 +177,7 @@ export function UsersManager({
               ))}
             </TBody>
           </Table>
+          )}
         </CardContent>
       </Card>
 
