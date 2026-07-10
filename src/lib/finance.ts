@@ -130,13 +130,30 @@ export type PaymentShareLike = {
   amount: number;
   paidAt: Date | string | null;
   teacherShareAmount?: number | null;
+  teacherShareConfirmedAt?: Date | string | null;
 };
 export type ExpenseLike = { amount: number; date: Date | string };
 
-/** Teacher revenue-shares paid out within a given period (by payment paidAt). */
+/**
+ * Confirmed teacher revenue-shares released within a given period, grouped by
+ * when the CEO confirmed them (not when the underlying tuition payment was
+ * collected) — a share is only a real cost once confirmed.
+ */
 export function sharesForPeriod(payments: PaymentShareLike[], period: string): number {
   return payments
-    .filter((p) => p.paidAt && p.teacherShareAmount && monthPeriod(p.paidAt) === period)
+    .filter(
+      (p) =>
+        p.teacherShareAmount &&
+        p.teacherShareConfirmedAt &&
+        monthPeriod(p.teacherShareConfirmedAt) === period,
+    )
+    .reduce((sum, p) => sum + (p.teacherShareAmount ?? 0), 0);
+}
+
+/** Teacher revenue-shares recorded but still awaiting CEO confirmation. */
+export function pendingSharesTotal(payments: PaymentShareLike[]): number {
+  return payments
+    .filter((p) => p.teacherShareAmount && p.paidAt && !p.teacherShareConfirmedAt)
     .reduce((sum, p) => sum + (p.teacherShareAmount ?? 0), 0);
 }
 
@@ -170,14 +187,16 @@ export function monthlyProfit(
   expenses: ExpenseLike[] = [],
 ): ProfitPoint[] {
   const revenueByMonth = new Map<string, number>();
-  const sharesByMonth = new Map<string, number>();
   for (const p of payments) {
     if (!p.paidAt) continue;
     const key = monthPeriod(p.paidAt);
     revenueByMonth.set(key, (revenueByMonth.get(key) ?? 0) + p.amount);
-    if (p.teacherShareAmount) {
-      sharesByMonth.set(key, (sharesByMonth.get(key) ?? 0) + p.teacherShareAmount);
-    }
+  }
+  const sharesByMonth = new Map<string, number>();
+  for (const p of payments) {
+    if (!p.teacherShareAmount || !p.teacherShareConfirmedAt) continue;
+    const key = monthPeriod(p.teacherShareConfirmedAt);
+    sharesByMonth.set(key, (sharesByMonth.get(key) ?? 0) + p.teacherShareAmount);
   }
   const salariesByMonth = new Map<string, number>();
   for (const p of payouts) {

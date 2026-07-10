@@ -283,6 +283,25 @@ export async function toggleTeacherPayout(
   return { ok: true };
 }
 
+/**
+ * Confirm (or un-confirm) a teacher's revenue-share on a payment. Shares are
+ * recorded automatically when the payment is made, but only count as a real
+ * payout — and only appear as a cost in the P&L — once the CEO confirms them.
+ */
+export async function toggleShareConfirmation(paymentId: string): Promise<ActionState> {
+  await requireRole(ROLES.CEO);
+  const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
+  if (!payment || !payment.teacherId || !payment.teacherShareAmount) {
+    return { error: "invalid" };
+  }
+  await prisma.payment.update({
+    where: { id: paymentId },
+    data: { teacherShareConfirmedAt: payment.teacherShareConfirmedAt ? null : new Date() },
+  });
+  revalidateFinance();
+  return { ok: true };
+}
+
 /* ------------------------------ Expenses ------------------------------- */
 
 export async function addExpense(

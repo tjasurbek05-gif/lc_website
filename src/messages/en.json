@@ -75,7 +75,8 @@
     "shop": "Shop",
     "finance": "Finance",
     "teacherPayouts": "Teachers",
-    "expenses": "Expenses"
+    "expenses": "Expenses",
+    "feedback": "Feedback"
   },
   "weekdays": {
     "mon": "Mon",
@@ -292,7 +293,13 @@
     "percentLabel": "Percent (%)",
     "teacherGets": "Teacher gets {amount}",
     "saveAndReceipt": "Save & receipt",
-    "receipt": "Receipt"
+    "receipt": "Receipt",
+    "activeStatus": "Active",
+    "leftStatus": "Left",
+    "markLeft": "Mark as left",
+    "reactivate": "Reactivate",
+    "markLeftConfirm": "Mark this person as left the center? They'll drop out of tuition tracking.",
+    "reactivateConfirm": "Reactivate this person?"
   },
   "rooms": {
     "title": "Rooms",
@@ -460,12 +467,36 @@
     "expensesAllTime": "Total expenses",
     "noExpenses": "No expenses logged yet.",
     "deleteExpenseConfirm": "Delete this expense?",
-    "downloading": "Downloading…"
+    "downloading": "Downloading…",
+    "teacherLabel": "Teacher",
+    "percentLabel": "Percent",
+    "newStudentsThisMonth": "New students this month",
+    "leftStudentsThisMonth": "Left this month",
+    "pendingSharesTitle": "Teacher shares awaiting confirmation",
+    "confirmShare": "Confirm",
+    "confirmedFromPayments": "Confirmed from payments",
+    "pendingAmount": "{amount} pending",
+    "pendingSharesBanner": "{amount} in teacher shares is waiting for your confirmation."
   },
   "methods": {
     "CASH": "Cash",
     "CLICK": "Click",
     "CARD": "Card",
     "TRANSFER": "Transfer"
+  },
+  "feedback": {
+    "studentTitle": "Feedback",
+    "studentHint": "Leave a comment for one of your teachers.",
+    "newFeedback": "New comment",
+    "teacherLabel": "Teacher",
+    "messageLabel": "Message",
+    "messagePlaceholder": "Write your comment…",
+    "send": "Send",
+    "sent": "Sent — thank you for the feedback.",
+    "historyTitle": "Your comments",
+    "noHistory": "No comments yet.",
+    "noTeachersYet": "You don't have any teachers assigned yet.",
+    "teacherTitle": "Feedback",
+    "teacherHint": "Comments your students have left for you."
   }
 }

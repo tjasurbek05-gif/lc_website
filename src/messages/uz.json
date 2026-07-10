@@ -75,7 +75,8 @@
     "shop": "Do'kon",
     "finance": "Moliya",
     "teacherPayouts": "O'qituvchilar",
-    "expenses": "Xarajatlar"
+    "expenses": "Xarajatlar",
+    "feedback": "Fikrlar"
   },
   "weekdays": {
     "mon": "Du",
@@ -292,7 +293,13 @@
     "percentLabel": "Foiz (%)",
     "teacherGets": "O'qituvchi oladi: {amount}",
     "saveAndReceipt": "Saqlash va chek",
-    "receipt": "Chek"
+    "receipt": "Chek",
+    "activeStatus": "Faol",
+    "leftStatus": "Ketgan",
+    "markLeft": "Ketgan deb belgilash",
+    "reactivate": "Qayta faollashtirish",
+    "markLeftConfirm": "Bu odamni markazni tark etgan deb belgilaysizmi? U to'lovlarni kuzatishdan chiqariladi.",
+    "reactivateConfirm": "Bu odamni qayta faollashtirasizmi?"
   },
   "rooms": {
     "title": "Xonalar",
@@ -460,12 +467,36 @@
     "expensesAllTime": "Jami xarajatlar",
     "noExpenses": "Hali xarajatlar yo'q.",
     "deleteExpenseConfirm": "Bu xarajatni o'chirasizmi?",
-    "downloading": "Yuklanmoqda…"
+    "downloading": "Yuklanmoqda…",
+    "teacherLabel": "O'qituvchi",
+    "percentLabel": "Foiz",
+    "newStudentsThisMonth": "Bu oy yangi o'quvchilar",
+    "leftStudentsThisMonth": "Bu oy ketganlar",
+    "pendingSharesTitle": "Tasdiqlanishi kutilayotgan o'qituvchi ulushlari",
+    "confirmShare": "Tasdiqlash",
+    "confirmedFromPayments": "To'lovlardan tasdiqlangan",
+    "pendingAmount": "{amount} kutilmoqda",
+    "pendingSharesBanner": "{amount} miqdoridagi o'qituvchi ulushlari tasdiqlashingizni kutmoqda."
   },
   "methods": {
     "CASH": "Naqd",
     "CLICK": "Click",
     "CARD": "Karta",
     "TRANSFER": "O'tkazma"
+  },
+  "feedback": {
+    "studentTitle": "Fikrlar",
+    "studentHint": "O'qituvchilaringizdan biriga izoh qoldiring.",
+    "newFeedback": "Yangi izoh",
+    "teacherLabel": "O'qituvchi",
+    "messageLabel": "Xabar",
+    "messagePlaceholder": "Izohingizni yozing…",
+    "send": "Yuborish",
+    "sent": "Yuborildi — fikringiz uchun rahmat.",
+    "historyTitle": "Sizning izohlaringiz",
+    "noHistory": "Hali izohlar yo'q.",
+    "noTeachersYet": "Sizga hali o'qituvchi biriktirilmagan.",
+    "teacherTitle": "Fikrlar",
+    "teacherHint": "O'quvchilaringiz sizga qoldirgan izohlar."
   }
 }

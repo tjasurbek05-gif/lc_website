@@ -35,6 +35,8 @@ async function main() {
 
   console.log("Seeding database…");
 
+  const now = new Date();
+
   // Clean slate (respecting FK order). Deleting groups also clears the
   // implicit student-enrollment join rows.
   await prisma.order.deleteMany();
@@ -141,6 +143,7 @@ async function main() {
 
   // (student, group) pairs to grade afterwards.
   const enrollments: { studentId: string; groupKey: string }[] = [];
+  const createdStudents: { id: string }[] = [];
   for (const def of studentDefs) {
     const user = await prisma.user.create({
       data: {
@@ -151,11 +154,31 @@ async function main() {
         enrolledGroups: { connect: def.groups.map((k) => ({ id: groups[k].id })) },
       },
     });
+    createdStudents.push({ id: user.id });
     for (const groupKey of def.groups) enrollments.push({ studentId: user.id, groupKey });
   }
 
+  // Backdate most students' join dates (a few months back) so "new this
+  // month" on the CEO dashboard reads realistically — the very last student
+  // is left with today's createdAt, genuinely new. One earlier student is
+  // marked as having left the center this month, for the "left" count.
+  for (let i = 0; i < createdStudents.length - 1; i++) {
+    await prisma.user.update({
+      where: { id: createdStudents[i].id },
+      data: {
+        createdAt: new Date(now.getFullYear(), now.getMonth() - randInt(1, 8), randInt(2, 27)),
+      },
+    });
+  }
+  await prisma.user.update({
+    where: { id: createdStudents[3].id },
+    data: {
+      active: false,
+      leftAt: new Date(now.getFullYear(), now.getMonth(), randInt(1, now.getDate())),
+    },
+  });
+
   // --- Grades: ~6 marks per (student, class) over the last 6 months, trending up. ---
-  const now = new Date();
   const POINTS = 6;
   const gradeRows: {
     studentId: string;
@@ -457,6 +480,7 @@ async function main() {
     teacherId?: string | null;
     teacherSharePct?: number | null;
     teacherShareAmount?: number | null;
+    teacherShareConfirmedAt?: Date | null;
   };
   let paymentCount = 0;
   for (let i = 0; i < allStudents.length; i++) {
@@ -487,6 +511,10 @@ async function main() {
       teacherId: grp?.teacherId ?? null,
       teacherSharePct: grp ? TEACHER_SHARE_PCT : null,
       teacherShareAmount: grp ? Math.round((TUITION_FEE * TEACHER_SHARE_PCT) / 100) : null,
+      // The CEO has already confirmed all but the most recent share per
+      // student, leaving a realistic pending-confirmation queue.
+      teacherShareConfirmedAt:
+        grp && idx < paidDates.length - 1 ? addDays(paidAt, randInt(1, 3)) : null,
     }));
     rows.push({
       studentId,
@@ -521,8 +549,30 @@ async function main() {
     }
   }
 
+  // --- Sample feedback from a few students to their teachers ---
+  const feedbackMessages = [
+    "Really enjoyed today's lesson, the explanations were very clear!",
+    "Could we go a bit slower on the homework review next time?",
+    "Thank you for the extra practice problems, they really helped.",
+  ];
+  let feedbackCount = 0;
+  for (let i = 0; i < Math.min(3, enrollments.length); i++) {
+    const e = enrollments[i];
+    const g = groups[e.groupKey];
+    if (!g.teacherId) continue;
+    await prisma.teacherFeedback.create({
+      data: {
+        studentId: e.studentId,
+        teacherId: g.teacherId,
+        groupId: g.id,
+        message: feedbackMessages[i % feedbackMessages.length],
+      },
+    });
+    feedbackCount++;
+  }
+
   console.log(
-    `Seeded: ${subjectDefs.length} subjects, ${groupDefs.length} classes, 1 admin, 1 CEO, ${teacherDefs.length} teachers, ${studentDefs.length} students, ${gradeRows.length} grades, ${roomDefs.length} rooms, ${assignmentCount} room assignments, ${lessonCount} lessons, ${attendanceCount} attendance records, ${productDefs.length} products, ${orderCount} orders, ${payoutCount} teacher payouts, ${paymentCount} tuition payments, ${expenseCount} expenses.`,
+    `Seeded: ${subjectDefs.length} subjects, ${groupDefs.length} classes, 1 admin, 1 CEO, ${teacherDefs.length} teachers, ${studentDefs.length} students, ${gradeRows.length} grades, ${roomDefs.length} rooms, ${assignmentCount} room assignments, ${lessonCount} lessons, ${attendanceCount} attendance records, ${productDefs.length} products, ${orderCount} orders, ${payoutCount} teacher payouts, ${paymentCount} tuition payments, ${expenseCount} expenses, ${feedbackCount} feedback messages.`,
   );
   console.log("\nDemo logins (password: password123):");
   console.log("  Admin   → +998901112201");

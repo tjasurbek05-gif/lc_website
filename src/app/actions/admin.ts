@@ -85,6 +85,28 @@ export async function deleteUser(id: string) {
   revalidatePath("/admin/subjects");
 }
 
+/**
+ * Toggle a student between active and "left" (sets `leftAt` when marking
+ * them left, clears it on reactivation). Drives the CEO dashboard's
+ * new/left-this-month counts and hides left students from tuition tracking.
+ */
+export async function toggleUserActive(id: string): Promise<ActionState> {
+  const session = await requireRole(ROLES.ADMIN);
+  if (id === session.userId) return { error: "invalid" };
+  const user = await prisma.user.findUnique({ where: { id }, select: { active: true } });
+  if (!user) return { error: "invalid" };
+  await prisma.user.update({
+    where: { id },
+    data: user.active
+      ? { active: false, leftAt: new Date() }
+      : { active: true, leftAt: null },
+  });
+  revalidateAdmin("/admin/users");
+  revalidatePath("/admin/finance");
+  revalidatePath("/ceo");
+  return { ok: true };
+}
+
 /* ----------------------------- Subjects ----------------------------- */
 
 export async function saveSubject(

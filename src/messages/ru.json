@@ -75,7 +75,8 @@
     "shop": "Магазин",
     "finance": "Финансы",
     "teacherPayouts": "Учителя",
-    "expenses": "Расходы"
+    "expenses": "Расходы",
+    "feedback": "Отзывы"
   },
   "weekdays": {
     "mon": "Пн",
@@ -292,7 +293,13 @@
     "percentLabel": "Процент (%)",
     "teacherGets": "Учитель получает {amount}",
     "saveAndReceipt": "Сохранить и чек",
-    "receipt": "Чек"
+    "receipt": "Чек",
+    "activeStatus": "Активен",
+    "leftStatus": "Ушёл",
+    "markLeft": "Отметить как ушедшего",
+    "reactivate": "Восстановить",
+    "markLeftConfirm": "Отметить этого человека как покинувшего центр? Он перестанет отслеживаться в оплате обучения.",
+    "reactivateConfirm": "Восстановить этого человека?"
   },
   "rooms": {
     "title": "Кабинеты",
@@ -460,12 +467,36 @@
     "expensesAllTime": "Всего расходов",
     "noExpenses": "Расходы ещё не добавлены.",
     "deleteExpenseConfirm": "Удалить этот расход?",
-    "downloading": "Загрузка…"
+    "downloading": "Загрузка…",
+    "teacherLabel": "Учитель",
+    "percentLabel": "Процент",
+    "newStudentsThisMonth": "Новых учеников в этом месяце",
+    "leftStudentsThisMonth": "Ушло в этом месяце",
+    "pendingSharesTitle": "Доли учителей, ожидающие подтверждения",
+    "confirmShare": "Подтвердить",
+    "confirmedFromPayments": "Подтверждено с оплат",
+    "pendingAmount": "{amount} в ожидании",
+    "pendingSharesBanner": "{amount} долей учителей ожидают вашего подтверждения."
   },
   "methods": {
     "CASH": "Наличные",
     "CLICK": "Click",
     "CARD": "Карта",
     "TRANSFER": "Перевод"
+  },
+  "feedback": {
+    "studentTitle": "Отзывы",
+    "studentHint": "Оставьте комментарий одному из своих учителей.",
+    "newFeedback": "Новый комментарий",
+    "teacherLabel": "Учитель",
+    "messageLabel": "Сообщение",
+    "messagePlaceholder": "Напишите комментарий…",
+    "send": "Отправить",
+    "sent": "Отправлено — спасибо за отзыв.",
+    "historyTitle": "Ваши комментарии",
+    "noHistory": "Пока нет комментариев.",
+    "noTeachersYet": "У вас пока нет назначенных учителей.",
+    "teacherTitle": "Отзывы",
+    "teacherHint": "Комментарии, которые оставили вам ученики."
   }
 }

@@ -15,7 +15,7 @@ export default async function AdminUsersPage({
   // Group by role in the canonical order (admins, then teachers, then students),
   // keeping names alphabetical within each role.
   const userRows = users
-    .map((u) => ({ id: u.id, name: u.name, phone: u.phone, role: u.role }))
+    .map((u) => ({ id: u.id, name: u.name, phone: u.phone, role: u.role, active: u.active }))
     .sort(
       (a, b) =>
         (ROLE_ORDER[a.role] ?? 99) - (ROLE_ORDER[b.role] ?? 99) ||

@@ -10,6 +10,7 @@ import {
   DoorOpen,
   LayoutDashboard,
   Menu,
+  MessageSquare,
   Receipt,
   ShoppingBag,
   Store,
@@ -39,10 +40,12 @@ const NAV: Record<Role, NavItem[]> = {
   TEACHER: [
     { href: "/teacher", key: "home", icon: LayoutDashboard },
     { href: "/teacher/lessons", key: "lesson", icon: ClipboardCheck },
+    { href: "/teacher/feedback", key: "feedback", icon: MessageSquare },
   ],
   STUDENT: [
     { href: "/student", key: "dashboard", icon: LayoutDashboard },
     { href: "/student/shop", key: "coinShop", icon: ShoppingBag },
+    { href: "/student/feedback", key: "feedback", icon: MessageSquare },
   ],
   CEO: [
     { href: "/ceo", key: "dashboard", icon: LayoutDashboard },

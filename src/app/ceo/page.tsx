@@ -1,10 +1,15 @@
+import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import {
+  AlertCircle,
+  ArrowRight,
   Banknote,
   GraduationCap,
   PiggyBank,
   TrendingDown,
   TrendingUp,
+  UserMinus,
+  UserPlus,
   Users,
 } from "lucide-react";
 import { requireRole } from "@/lib/auth";
@@ -15,7 +20,9 @@ import {
   expensesForPeriod,
   monthlyProfit,
   monthlyRevenue,
+  monthPeriod,
   payrollForPeriod,
+  pendingSharesTotal,
   revenueForPeriod,
   sharesForPeriod,
   studentStandingStatus,
@@ -43,10 +50,16 @@ export default async function CeoDashboard() {
   const now = new Date();
   const period = currentPeriod(now);
 
-  const [students, teachers, payouts, expenses] = await Promise.all([
+  const [allStudents, teachers, payouts, expenses] = await Promise.all([
     prisma.user.findMany({
       where: { role: ROLES.STUDENT },
-      select: { id: true, payments: { orderBy: { dueDate: "desc" } } },
+      select: {
+        id: true,
+        active: true,
+        createdAt: true,
+        leftAt: true,
+        payments: { orderBy: { dueDate: "desc" } },
+      },
     }),
     prisma.user.findMany({
       where: { role: ROLES.TEACHER },
@@ -58,14 +71,24 @@ export default async function CeoDashboard() {
     prisma.expense.findMany({ select: { amount: true, date: true } }),
   ]);
 
-  const allPayments = students.flatMap((s) => s.payments);
-  const good = students.filter(
+  // Revenue history includes payments from students who have since left — that
+  // money was really collected. Standing (good/overdue/not-started) only makes
+  // sense for currently active students.
+  const allPayments = allStudents.flatMap((s) => s.payments);
+  const activeStudents = allStudents.filter((s) => s.active);
+  const good = activeStudents.filter(
     (s) => studentStandingStatus(s.payments, now) === "GOOD",
   ).length;
-  const overdue = students.filter(
+  const overdue = activeStudents.filter(
     (s) => studentStandingStatus(s.payments, now) === "OVERDUE",
   ).length;
-  const none = students.length - good - overdue;
+  const none = activeStudents.length - good - overdue;
+  const newThisMonth = allStudents.filter(
+    (s) => monthPeriod(s.createdAt) === period,
+  ).length;
+  const leftThisMonth = allStudents.filter(
+    (s) => s.leftAt && monthPeriod(s.leftAt) === period,
+  ).length;
 
   const revenueThisMonth = revenueForPeriod(allPayments, period);
   const salariesThisMonth = payrollForPeriod(payouts, period);
@@ -73,6 +96,7 @@ export default async function CeoDashboard() {
   const expensesThisMonth = expensesForPeriod(expenses, period);
   const costThisMonth = salariesThisMonth + sharesThisMonth + expensesThisMonth;
   const netProfit = revenueThisMonth - costThisMonth;
+  const pendingShares = pendingSharesTotal(allPayments);
 
   const trend = monthlyRevenue(allPayments).slice(-6);
   const profitData = monthlyProfit(allPayments, payouts, expenses).slice(-6);
@@ -96,8 +120,35 @@ export default async function CeoDashboard() {
         action={<ExportButton label={t("downloadExcel")} downloadingLabel={t("downloading")} />}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <StatCard label={t("totalStudents")} value={students.length} icon={<Users />} />
+      {pendingShares > 0 ? (
+        <Link
+          href="/ceo/teachers"
+          className="mb-6 flex items-center gap-3 rounded-xl border border-warning/30 bg-warning/10 p-4 transition-colors hover:bg-warning/15"
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-warning/20 text-warning">
+            <AlertCircle className="size-5" />
+          </span>
+          <p className="text-sm font-medium">
+            {t("pendingSharesBanner", { amount: formatCurrency(pendingShares, locale) })}
+          </p>
+          <ArrowRight className="ml-auto size-4 text-muted-foreground" />
+        </Link>
+      ) : null}
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label={t("totalStudents")} value={activeStudents.length} icon={<Users />} />
+        <StatCard
+          label={t("newStudentsThisMonth")}
+          value={newThisMonth}
+          icon={<UserPlus />}
+          accent="success"
+        />
+        <StatCard
+          label={t("leftStudentsThisMonth")}
+          value={leftThisMonth}
+          icon={<UserMinus />}
+          accent={leftThisMonth > 0 ? "danger" : "primary"}
+        />
         <StatCard label={t("totalTeachers")} value={teachers.length} icon={<GraduationCap />} />
         <StatCard
           label={t("revenueThisMonth")}
@@ -161,7 +212,7 @@ export default async function CeoDashboard() {
             <CardTitle>{t("paymentBreakdown")}</CardTitle>
           </CardHeader>
           <CardContent>
-            {students.length ? (
+            {activeStudents.length ? (
               <StatusPie data={pieData} />
             ) : (
               <EmptyState title={t("noStudentsYet")} icon={<Users />} />

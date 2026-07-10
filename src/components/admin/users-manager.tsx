@@ -3,7 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Pencil, Plus, Search, Trash2, UserCheck, UserX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,13 +15,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { ALL_ROLES, ROLES } from "@/lib/constants";
-import { deleteUser, saveUser } from "@/app/actions/admin";
+import { deleteUser, saveUser, toggleUserActive } from "@/app/actions/admin";
 
 export type UserRow = {
   id: string;
   name: string;
   phone: string;
   role: string;
+  active: boolean;
 };
 
 function roleVariant(role: string): "danger" | "primary" | "default" {
@@ -99,6 +100,12 @@ export function UsersManager({
     await deleteUser(u.id);
     router.refresh();
   }
+  async function onToggleActive(u: UserRow) {
+    const confirmMsg = u.active ? t("markLeftConfirm") : t("reactivateConfirm");
+    if (!window.confirm(confirmMsg)) return;
+    await toggleUserActive(u.id);
+    router.refresh();
+  }
 
   return (
     <>
@@ -136,6 +143,7 @@ export function UsersManager({
                 <TH className="pl-5">{tc("name")}</TH>
                 <TH>{tc("phone")}</TH>
                 <TH>{tc("role")}</TH>
+                <TH>{t("statusLabel")}</TH>
                 <TH className="pr-5 text-right">{tc("actions")}</TH>
               </TR>
             </THead>
@@ -152,8 +160,27 @@ export function UsersManager({
                   <TD>
                     <Badge variant={roleVariant(u.role)}>{tr(u.role)}</Badge>
                   </TD>
+                  <TD>
+                    {u.role === ROLES.STUDENT || u.role === ROLES.TEACHER ? (
+                      <Badge variant={u.active ? "success" : "outline"}>
+                        {u.active ? t("activeStatus") : t("leftStatus")}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TD>
                   <TD className="pr-5">
                     <div className="flex justify-end gap-1">
+                      {u.role === ROLES.STUDENT || u.role === ROLES.TEACHER ? (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => onToggleActive(u)}
+                          aria-label={u.active ? t("markLeft") : t("reactivate")}
+                        >
+                          {u.active ? <UserX /> : <UserCheck />}
+                        </Button>
+                      ) : null}
                       <Button
                         size="icon"
                         variant="ghost"

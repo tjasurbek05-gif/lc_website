@@ -39,7 +39,7 @@ export default async function AdminFinancePage({
   const [settings, students, teachers] = await Promise.all([
     prisma.financeSettings.findUnique({ where: { id: "singleton" } }),
     prisma.user.findMany({
-      where: { role: ROLES.STUDENT },
+      where: { role: ROLES.STUDENT, active: true },
       orderBy: { name: "asc" },
       select: {
         id: true,

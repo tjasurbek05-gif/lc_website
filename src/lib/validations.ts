@@ -267,6 +267,18 @@ export const teacherPayoutSchema = z.object({
   period: z.string().regex(/^\d{4}-\d{2}$/, "Invalid period"),
 });
 
+/* ------------------------------ Feedback ------------------------------ */
+
+export const feedbackSchema = z.object({
+  teacherId: z.string().min(1, "Pick a teacher"),
+  groupId: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v && v.length > 0 ? v : null)),
+  message: z.string().trim().min(1, "Write a message").max(1000),
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type UserCreateInput = z.infer<typeof userCreateSchema>;
 export type GradeCreateInput = z.infer<typeof gradeCreateSchema>;

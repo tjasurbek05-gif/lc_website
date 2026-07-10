@@ -18,7 +18,7 @@ export async function GET() {
     return new Response("Forbidden", { status: 403 });
   }
 
-  const [settings, payments, payouts, expenses] = await Promise.all([
+  const [settings, payments, payouts, expenses, students] = await Promise.all([
     prisma.financeSettings.findUnique({ where: { id: "singleton" } }),
     prisma.payment.findMany({
       where: { paidAt: { not: null } },
@@ -35,6 +35,11 @@ export async function GET() {
       include: { teacher: { select: { name: true } } },
     }),
     prisma.expense.findMany({ orderBy: { date: "asc" } }),
+    prisma.user.findMany({
+      where: { role: ROLES.STUDENT },
+      orderBy: { createdAt: "asc" },
+      select: { name: true, phone: true, active: true, createdAt: true, leftAt: true },
+    }),
   ]);
 
   const company = settings?.companyName ?? "Brian";
@@ -89,6 +94,7 @@ export async function GET() {
     { header: "Teacher", key: "teacher", width: 20 },
     { header: "Share %", key: "pct", width: 10 },
     { header: "Teacher share", key: "share", width: 16, style: { numFmt: MONEY_FMT } },
+    { header: "Share confirmed", key: "shareConfirmed", width: 16 },
     { header: "Recorded by", key: "recordedBy", width: 20 },
   ];
   paySheet.getRow(1).font = { bold: true };
@@ -103,6 +109,7 @@ export async function GET() {
       teacher: p.teacher?.name ?? "",
       pct: p.teacherSharePct ?? "",
       share: p.teacherShareAmount ?? "",
+      shareConfirmed: p.teacherShareAmount ? (p.teacherShareConfirmedAt ? "Yes" : "Pending") : "",
       recordedBy: p.recordedBy?.name ?? "",
     });
   }
@@ -137,6 +144,26 @@ export async function GET() {
   expSheet.getRow(1).font = { bold: true };
   for (const x of expenses) {
     expSheet.addRow({ date: x.date, name: x.name, amount: x.amount });
+  }
+
+  // --- Sheet 5: students (join/leave history) ---
+  const studentSheet = wb.addWorksheet("Students");
+  studentSheet.columns = [
+    { header: "Name", key: "name", width: 24 },
+    { header: "Phone", key: "phone", width: 18 },
+    { header: "Status", key: "status", width: 12 },
+    { header: "Joined", key: "joined", width: 14, style: { numFmt: DATE_FMT } },
+    { header: "Left", key: "left", width: 14, style: { numFmt: DATE_FMT } },
+  ];
+  studentSheet.getRow(1).font = { bold: true };
+  for (const s of students) {
+    studentSheet.addRow({
+      name: s.name,
+      phone: s.phone,
+      status: s.active ? "Active" : "Left",
+      joined: s.createdAt,
+      left: s.leftAt ?? "",
+    });
   }
 
   const buffer = await wb.xlsx.writeBuffer();
