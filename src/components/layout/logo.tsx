@@ -1,11 +1,12 @@
+"use client";
+
 import { cn } from "@/lib/utils";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 
 /**
  * Brand logo for "Brian".
- *
- * Uses the real wordmark asset at `public/logo.png` (black mark on a
- * transparent background). On dark surfaces pass `variant="light"`, which
- * inverts the mark to white so it stays visible.
+ * Automatically switches between black and white versions based on theme.
  */
 export function Logo({
   className,
@@ -14,14 +15,24 @@ export function Logo({
   className?: string;
   variant?: "default" | "light";
 }) {
+  const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Auto-detect dark mode
+  const isDark = mounted && theme === "dark";
+  const logoSrc = isDark ? "/logo-white.png" : "/logo-black.png";
+
   return (
     <span className={cn("flex items-center", className)}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/logo.png"
+        src={logoSrc}
         alt="Brian"
         draggable={false}
-        className={cn("h-7 w-auto select-none", variant === "light" && "invert")}
+        className="h-7 w-auto select-none"
       />
     </span>
   );
