@@ -1,9 +1,9 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
-import { ROLES } from "@/lib/constants";
+import { PrismaClient } from "@prisma/client";
+import { ROLES } from "../src/lib/constants";
 
-async function main() {
+const prisma = new PrismaClient();
   console.log("Seeding database with Admin and CEO only...");
 
   // Hash passwords
