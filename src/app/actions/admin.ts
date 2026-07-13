@@ -26,7 +26,7 @@ export async function saveUser(
   _prev: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  await requireRole(ROLES.ADMIN);
+  const session = await requireRole(ROLES.ADMIN);
   const id = (formData.get("id") as string) || "";
   const raw = {
     name: formData.get("name"),
@@ -35,7 +35,21 @@ export async function saveUser(
     password: (formData.get("password") as string) || "",
   };
 
+  // Guard: only a CEO may create/promote a CEO account. An Admin can't
+  // bypass this by tampering with the submitted role field.
+  if (raw.role === ROLES.CEO && session.role !== ROLES.CEO) {
+    return { error: "forbidden" };
+  }
+
   if (id) {
+    // Guard: an Admin (non-CEO) may never edit an existing CEO account —
+    // not their name, phone, password, nor role. This closes the hole
+    // where any Admin could reset the CEO's password and log in as them.
+    const target = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+    if (target?.role === ROLES.CEO && session.role !== ROLES.CEO) {
+      return { error: "forbidden" };
+    }
+
     const parsed = userUpdateSchema.safeParse({ id, ...raw });
     if (!parsed.success) return { error: "invalid" };
     const d = parsed.data;
@@ -80,6 +94,11 @@ export async function saveUser(
 export async function deleteUser(id: string) {
   const session = await requireRole(ROLES.ADMIN);
   if (id === session.userId) return; // never delete yourself
+
+  // Guard: an Admin (non-CEO) may never delete a CEO account.
+  const target = await prisma.user.findUnique({ where: { id }, select: { role: true } });
+  if (target?.role === ROLES.CEO && session.role !== ROLES.CEO) return;
+
   await prisma.user.delete({ where: { id } });
   revalidateAdmin("/admin/users");
   revalidatePath("/admin/subjects");
@@ -93,8 +112,15 @@ export async function deleteUser(id: string) {
 export async function toggleUserActive(id: string): Promise<ActionState> {
   const session = await requireRole(ROLES.ADMIN);
   if (id === session.userId) return { error: "invalid" };
-  const user = await prisma.user.findUnique({ where: { id }, select: { active: true } });
+
+  const user = await prisma.user.findUnique({ where: { id }, select: { active: true, role: true } });
   if (!user) return { error: "invalid" };
+
+  // Guard: an Admin (non-CEO) may never deactivate a CEO account.
+  if (user.role === ROLES.CEO && session.role !== ROLES.CEO) {
+    return { error: "forbidden" };
+  }
+
   await prisma.user.update({
     where: { id },
     data: user.active
