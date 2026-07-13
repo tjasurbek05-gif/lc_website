@@ -251,6 +251,7 @@
     "deleteSubjectConfirm": "Bu fanni va uning sinflarini o'chirasizmi?",
     "deleteGroupConfirm": "Bu sinfni o'chirasizmi?",
     "passwordKeepHint": "Joriy parolni saqlash uchun bo'sh qoldiring",
+    "ceoProtected": "Himoyalangan",
     "membersCount": "{count} o'quvchi",
     "openFinance": "Moliyani ochish",
     "financeTitle": "Moliya",
