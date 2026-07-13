@@ -26,7 +26,7 @@ export async function createSession(payload: SessionPayload): Promise<void> {
   const store = await cookies();
   store.set(SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: process.env.COOKIE_SECURE === "true",
     sameSite: "lax",
     path: "/",
     maxAge: MAX_AGE,
