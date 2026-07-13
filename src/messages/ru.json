@@ -251,6 +251,7 @@
     "deleteSubjectConfirm": "Удалить этот предмет и его классы?",
     "deleteGroupConfirm": "Удалить этот класс?",
     "passwordKeepHint": "Оставьте пустым, чтобы сохранить текущий пароль",
+    "ceoProtected": "Защищено",
     "membersCount": "{count} учеников",
     "openFinance": "Открыть финансы",
     "financeTitle": "Финансы",
