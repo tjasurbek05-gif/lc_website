@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Pencil, Plus, Search, Trash2, UserCheck, UserX } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,18 +12,21 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
 import { Avatar } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { ALL_ROLES, ROLES } from "@/lib/constants";
-import { deleteUser, saveUser, toggleUserActive } from "@/app/actions/admin";
+import { deleteUser, saveUser } from "@/app/actions/admin";
 
 export type UserRow = {
   id: string;
   name: string;
   phone: string;
   role: string;
-  active: boolean;
 };
+
+// The Admin panel never lets an Admin create/promote a CEO account — that's
+// reserved for the CEO themself. Filtering it out of the dropdown here is a
+// UX nicety; the real enforcement lives server-side in saveUser().
+const ASSIGNABLE_ROLES = ALL_ROLES.filter((r) => r !== ROLES.CEO);
 
 function roleVariant(role: string): "danger" | "primary" | "default" {
   if (role === ROLES.ADMIN) return "danger";
@@ -59,15 +62,6 @@ export function UsersManager({
   const [role, setRole] = useState<string>(() => roleFromNew(initialNewRole));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | undefined>();
-  const [query, setQuery] = useState("");
-
-  const filteredUsers = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return users;
-    return users.filter(
-      (u) => u.name.toLowerCase().includes(q) || u.phone.toLowerCase().includes(q),
-    );
-  }, [users, query]);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -90,20 +84,18 @@ export function UsersManager({
     setOpen(true);
   }
   function openEdit(u: UserRow) {
+    // CEO accounts can't be edited from the Admin panel — the server would
+    // reject it anyway, but we don't even offer the modal for it.
+    if (u.role === ROLES.CEO) return;
     setEditing(u);
     setError(undefined);
     setRole(u.role);
     setOpen(true);
   }
   async function onDelete(u: UserRow) {
+    if (u.role === ROLES.CEO) return; // never offered for CEO accounts
     if (!window.confirm(t("deleteUserConfirm"))) return;
     await deleteUser(u.id);
-    router.refresh();
-  }
-  async function onToggleActive(u: UserRow) {
-    const confirmMsg = u.active ? t("markLeftConfirm") : t("reactivateConfirm");
-    if (!window.confirm(confirmMsg)) return;
-    await toggleUserActive(u.id);
     router.refresh();
   }
 
@@ -120,91 +112,64 @@ export function UsersManager({
         </Button>
       </div>
 
-      <div className="relative mb-4 max-w-sm">
-        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={tc("searchByNamePhone")}
-          className="pl-9"
-        />
-      </div>
-
       <Card>
         <CardContent className="px-0 py-0">
-          {filteredUsers.length === 0 ? (
-            <div className="p-5">
-              <EmptyState title={tc("noResults")} />
-            </div>
-          ) : (
           <Table>
             <THead>
               <TR>
                 <TH className="pl-5">{tc("name")}</TH>
                 <TH>{tc("phone")}</TH>
                 <TH>{tc("role")}</TH>
-                <TH>{t("statusLabel")}</TH>
                 <TH className="pr-5 text-right">{tc("actions")}</TH>
               </TR>
             </THead>
             <TBody>
-              {filteredUsers.map((u) => (
-                <TR key={u.id}>
-                  <TD className="pl-5">
-                    <div className="flex items-center gap-3">
-                      <Avatar name={u.name} className="size-8" />
-                      <span className="font-medium">{u.name}</span>
-                    </div>
-                  </TD>
-                  <TD className="text-muted-foreground">{u.phone}</TD>
-                  <TD>
-                    <Badge variant={roleVariant(u.role)}>{tr(u.role)}</Badge>
-                  </TD>
-                  <TD>
-                    {u.role === ROLES.STUDENT || u.role === ROLES.TEACHER ? (
-                      <Badge variant={u.active ? "success" : "outline"}>
-                        {u.active ? t("activeStatus") : t("leftStatus")}
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TD>
-                  <TD className="pr-5">
-                    <div className="flex justify-end gap-1">
-                      {u.role === ROLES.STUDENT || u.role === ROLES.TEACHER ? (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => onToggleActive(u)}
-                          aria-label={u.active ? t("markLeft") : t("reactivate")}
-                        >
-                          {u.active ? <UserX /> : <UserCheck />}
-                        </Button>
-                      ) : null}
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => openEdit(u)}
-                        aria-label={tc("edit")}
-                      >
-                        <Pencil />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => onDelete(u)}
-                        aria-label={tc("delete")}
-                        className="text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 />
-                      </Button>
-                    </div>
-                  </TD>
-                </TR>
-              ))}
+              {users.map((u) => {
+                const isCeo = u.role === ROLES.CEO;
+                return (
+                  <TR key={u.id}>
+                    <TD className="pl-5">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={u.name} className="size-8" />
+                        <span className="font-medium">{u.name}</span>
+                      </div>
+                    </TD>
+                    <TD className="text-muted-foreground">{u.phone}</TD>
+                    <TD>
+                      <Badge variant={roleVariant(u.role)}>{tr(u.role)}</Badge>
+                    </TD>
+                    <TD className="pr-5">
+                      {isCeo ? (
+                        <p className="text-right text-xs text-muted-foreground">
+                          {t("ceoProtected")}
+                        </p>
+                      ) : (
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => openEdit(u)}
+                            aria-label={tc("edit")}
+                          >
+                            <Pencil />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => onDelete(u)}
+                            aria-label={tc("delete")}
+                            className="text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 />
+                          </Button>
+                        </div>
+                      )}
+                    </TD>
+                  </TR>
+                );
+              })}
             </TBody>
           </Table>
-          )}
         </CardContent>
       </Card>
 
@@ -241,7 +206,7 @@ export function UsersManager({
               value={role}
               onChange={(e) => setRole(e.target.value)}
             >
-              {ALL_ROLES.map((r) => (
+              {ASSIGNABLE_ROLES.map((r) => (
                 <option key={r} value={r}>
                   {tr(r)}
                 </option>
