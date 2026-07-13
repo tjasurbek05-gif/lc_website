@@ -251,6 +251,7 @@
     "deleteSubjectConfirm": "Delete this subject and its classes?",
     "deleteGroupConfirm": "Delete this class?",
     "passwordKeepHint": "Leave blank to keep current password",
+    "ceoProtected": "Protected",
     "membersCount": "{count} students",
     "openFinance": "Open finance",
     "financeTitle": "Finance",
