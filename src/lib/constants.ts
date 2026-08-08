@@ -75,6 +75,13 @@ export const WEEKDAY_KEYS: Record<number, string> = {
   7: "sun",
 };
 
+/**
+ * Admin-configured incentive: a tuition payment recorded on or before this
+ * day of the calendar month earns the student a coin bonus (see
+ * FinanceSettings.earlyPaymentBonusCoins). Motivates paying on time.
+ */
+export const EARLY_PAYMENT_DAY = 10;
+
 /** Landing path for each role's dashboard. */
 export function dashboardPathForRole(role: string): string {
   switch (role) {

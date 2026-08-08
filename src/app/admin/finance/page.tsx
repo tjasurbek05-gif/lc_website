@@ -45,6 +45,7 @@ export default async function AdminFinancePage({
         id: true,
         name: true,
         phone: true,
+        coins: true,
         payments: { orderBy: { dueDate: "desc" } },
         enrolledGroups: {
           select: {
@@ -72,6 +73,7 @@ export default async function AdminFinancePage({
       id: s.id,
       name: s.name,
       phone: s.phone,
+      coins: s.coins,
       status: studentStandingStatus(s.payments, now),
       dueDate: open ? open.dueDate.toISOString() : null,
       dueAmount: open ? open.amount : null,
@@ -85,7 +87,12 @@ export default async function AdminFinancePage({
       })),
       history: s.payments
         .filter((p) => p.paidAt)
-        .map((p) => ({ id: p.id, amount: p.amount, paidAt: p.paidAt!.toISOString() }))
+        .map((p) => ({
+          id: p.id,
+          amount: p.amount,
+          paidAt: p.paidAt!.toISOString(),
+          bonusCoins: p.bonusCoins,
+        }))
         .sort((a, b) => b.paidAt.localeCompare(a.paidAt)),
     };
   });
@@ -127,6 +134,7 @@ export default async function AdminFinancePage({
   return (
     <FinanceManager
       fee={fee}
+      earlyBonusCoins={settings?.earlyPaymentBonusCoins ?? 0}
       companyName={settings?.companyName ?? "Brian"}
       branchName={settings?.branchName ?? null}
       teachers={teachers}

@@ -251,6 +251,10 @@ export const recordPaymentSchema = z.object({
     .pipe(z.number().min(0).max(100).nullable()),
 });
 
+export const earlyPaymentBonusSchema = z.object({
+  bonusCoins: z.coerce.number().int().min(0, "Must be 0 or more"),
+});
+
 export const expenseSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120),
   amount: z.coerce.number().min(0, "Must be 0 or more"),

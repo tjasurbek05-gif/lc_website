@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
-import { ROLES } from "@/lib/constants";
-import { addOneMonth } from "@/lib/finance";
+import { EARLY_PAYMENT_DAY, ROLES } from "@/lib/constants";
+import { addOneMonth, paidDayOfMonth } from "@/lib/finance";
 import {
+  earlyPaymentBonusSchema,
   expenseSchema,
   financeInfoSchema,
   recordPaymentSchema,
@@ -74,6 +75,30 @@ export async function setFinanceInfo(
   return { ok: true };
 }
 
+/**
+ * Coins automatically granted to a student when their payment is recorded
+ * on or before EARLY_PAYMENT_DAY of the month (see recordPayment). 0 turns
+ * the bonus off.
+ */
+export async function setEarlyPaymentBonus(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireRole(ROLES.ADMIN);
+  const parsed = earlyPaymentBonusSchema.safeParse({
+    bonusCoins: formData.get("bonusCoins"),
+  });
+  if (!parsed.success) return { error: "invalid" };
+
+  await prisma.financeSettings.upsert({
+    where: { id: "singleton" },
+    create: { id: "singleton", earlyPaymentBonusCoins: parsed.data.bonusCoins },
+    update: { earlyPaymentBonusCoins: parsed.data.bonusCoins },
+  });
+  revalidateFinance();
+  return { ok: true };
+}
+
 /* ------------------------------- Tuition ------------------------------- */
 
 /**
@@ -122,12 +147,22 @@ export async function recordPayment(
 
   const paidAtDate = new Date(`${paidAt}T00:00:00`);
 
-  const last = await prisma.payment.findFirst({
-    where: { receiptNo: { not: null } },
-    orderBy: { receiptNo: "desc" },
-    select: { receiptNo: true },
-  });
+  const [last, settings] = await Promise.all([
+    prisma.payment.findFirst({
+      where: { receiptNo: { not: null } },
+      orderBy: { receiptNo: "desc" },
+      select: { receiptNo: true },
+    }),
+    prisma.financeSettings.findUnique({ where: { id: "singleton" } }),
+  ]);
   const receiptNo = (last?.receiptNo ?? RECEIPT_BASE) + 1;
+
+  // Early-payment incentive: paying on or before EARLY_PAYMENT_DAY of the
+  // month grants the configured coin bonus (0 = disabled).
+  const bonusCoins =
+    paidDayOfMonth(paidAtDate) <= EARLY_PAYMENT_DAY
+      ? (settings?.earlyPaymentBonusCoins ?? 0)
+      : 0;
 
   const paidData = {
     amount,
@@ -139,29 +174,41 @@ export async function recordPayment(
     teacherId,
     teacherSharePct,
     teacherShareAmount,
+    bonusCoins,
   };
 
-  const openCycle = await prisma.payment.findFirst({
-    where: { studentId, paidAt: null },
-    orderBy: { dueDate: "asc" },
-  });
-
-  let paymentId: string;
-  if (openCycle) {
-    const updated = await prisma.payment.update({
-      where: { id: openCycle.id },
-      data: paidData,
+  const paymentId = await prisma.$transaction(async (tx) => {
+    const openCycle = await tx.payment.findFirst({
+      where: { studentId, paidAt: null },
+      orderBy: { dueDate: "asc" },
     });
-    paymentId = updated.id;
-  } else {
-    const created = await prisma.payment.create({
-      data: { studentId, dueDate: paidAtDate, ...paidData },
-    });
-    paymentId = created.id;
-  }
 
-  await prisma.payment.create({
-    data: { studentId, amount, dueDate: addOneMonth(paidAtDate), paidAt: null },
+    let id: string;
+    if (openCycle) {
+      const updated = await tx.payment.update({
+        where: { id: openCycle.id },
+        data: paidData,
+      });
+      id = updated.id;
+    } else {
+      const created = await tx.payment.create({
+        data: { studentId, dueDate: paidAtDate, ...paidData },
+      });
+      id = created.id;
+    }
+
+    await tx.payment.create({
+      data: { studentId, amount, dueDate: addOneMonth(paidAtDate), paidAt: null },
+    });
+
+    if (bonusCoins > 0) {
+      await tx.user.update({
+        where: { id: studentId },
+        data: { coins: { increment: bonusCoins } },
+      });
+    }
+
+    return id;
   });
 
   revalidateFinance();
@@ -216,14 +263,32 @@ export async function undoLastPayment(studentId: string): Promise<ActionState> {
   });
   if (!lastPaid) return { error: "invalid" };
 
-  // The next cycle auto-opened right after this payment — drop it (it's
-  // still untouched), then reopen the payment we're undoing.
-  const nextCycle = await prisma.payment.findFirst({
-    where: { studentId, paidAt: null },
-    orderBy: { dueDate: "desc" },
+  await prisma.$transaction(async (tx) => {
+    // The next cycle auto-opened right after this payment — drop it (it's
+    // still untouched), then reopen the payment we're undoing.
+    const nextCycle = await tx.payment.findFirst({
+      where: { studentId, paidAt: null },
+      orderBy: { dueDate: "desc" },
+    });
+    if (nextCycle) await tx.payment.delete({ where: { id: nextCycle.id } });
+    await tx.payment.update({
+      where: { id: lastPaid.id },
+      data: { paidAt: null, bonusCoins: 0 },
+    });
+
+    // Claw back any early-payment bonus this payment had granted, floored
+    // at 0 in case the student already spent some of it in the coin shop.
+    if (lastPaid.bonusCoins > 0) {
+      const student = await tx.user.findUnique({
+        where: { id: studentId },
+        select: { coins: true },
+      });
+      await tx.user.update({
+        where: { id: studentId },
+        data: { coins: Math.max(0, (student?.coins ?? 0) - lastPaid.bonusCoins) },
+      });
+    }
   });
-  if (nextCycle) await prisma.payment.delete({ where: { id: nextCycle.id } });
-  await prisma.payment.update({ where: { id: lastPaid.id }, data: { paidAt: null } });
 
   revalidateFinance();
   return { ok: true };

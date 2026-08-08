@@ -32,6 +32,12 @@ export function addOneMonth(date: Date | string): Date {
   return next;
 }
 
+/** Calendar day-of-month (local) a payment was made on — used to decide
+ * whether it qualifies for the early-payment coin bonus. */
+export function paidDayOfMonth(paidAt: Date | string): number {
+  return toDate(paidAt).getDate();
+}
+
 /** "YYYY-MM" period key for a date, used to identify a payout month. */
 export function monthPeriod(date: Date | string): string {
   const d = toDate(date);

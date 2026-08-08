@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Coins,
   History,
   Pencil,
   Receipt,
@@ -30,10 +31,12 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/page-header";
+import { EARLY_PAYMENT_DAY } from "@/lib/constants";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import {
   getReceiptData,
   recordPayment,
+  setEarlyPaymentBonus,
   setFinanceInfo,
   setTuitionFee,
   undoLastPayment,
@@ -52,13 +55,14 @@ export type StudentFinanceRow = {
   id: string;
   name: string;
   phone: string;
+  coins: number;
   status: "GOOD" | "OVERDUE" | "NONE";
   dueDate: string | null;
   dueAmount: number | null;
   lastPaidAt: string | null;
   lastAmount: number | null;
   groups: GroupOption[];
-  history: { id: string; amount: number; paidAt: string }[];
+  history: { id: string; amount: number; paidAt: string; bonusCoins: number }[];
 };
 
 export type CalendarCell = {
@@ -91,6 +95,7 @@ function localeToLang(locale: string): "uz" | "ru" | "en" {
 
 export function FinanceManager({
   fee,
+  earlyBonusCoins,
   companyName,
   branchName,
   teachers,
@@ -105,6 +110,7 @@ export function FinanceManager({
   hint,
 }: {
   fee: number;
+  earlyBonusCoins: number;
   companyName: string;
   branchName: string | null;
   teachers: { id: string; name: string }[];
@@ -126,6 +132,7 @@ export function FinanceManager({
   const router = useRouter();
 
   const [feeOpen, setFeeOpen] = useState(false);
+  const [bonusOpen, setBonusOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [payOpen, setPayOpen] = useState<StudentFinanceRow | null>(null);
   const [historyOpen, setHistoryOpen] = useState<StudentFinanceRow | null>(null);
@@ -136,6 +143,7 @@ export function FinanceManager({
 
   // Controlled fields for the record-payment modal (to preview the split).
   const [amount, setAmount] = useState<number>(0);
+  const [paidAtInput, setPaidAtInput] = useState<string>(todayInput());
   const [groupId, setGroupId] = useState<string>("");
   const [shareTeacherId, setShareTeacherId] = useState<string>("");
   const [sharePct, setSharePct] = useState<string>("");
@@ -156,6 +164,10 @@ export function FinanceManager({
       ? Math.round((amount * Number(sharePct)) / 100)
       : 0;
 
+  const paidDay = Number(paidAtInput.split("-")[2]);
+  const bonusEligible =
+    earlyBonusCoins > 0 && Number.isFinite(paidDay) && paidDay <= EARLY_PAYMENT_DAY;
+
   async function onFeeSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setPending(true);
@@ -164,6 +176,18 @@ export function FinanceManager({
     setPending(false);
     if (res?.ok) {
       setFeeOpen(false);
+      router.refresh();
+    } else setError(res?.error);
+  }
+
+  async function onBonusSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setPending(true);
+    setError(undefined);
+    const res = await setEarlyPaymentBonus({}, new FormData(e.currentTarget));
+    setPending(false);
+    if (res?.ok) {
+      setBonusOpen(false);
       router.refresh();
     } else setError(res?.error);
   }
@@ -210,6 +234,7 @@ export function FinanceManager({
   function openPay(row: StudentFinanceRow) {
     setError(undefined);
     setAmount(row.dueAmount ?? fee);
+    setPaidAtInput(todayInput());
     const firstGroup = row.groups[0];
     setGroupId(firstGroup?.id ?? "");
     setShareTeacherId(firstGroup?.teacherId ?? "");
@@ -243,6 +268,10 @@ export function FinanceManager({
             <Button variant="outline" onClick={() => setFeeOpen(true)}>
               <Pencil />
               {t("editFee")}
+            </Button>
+            <Button variant="outline" onClick={() => setBonusOpen(true)}>
+              <Coins />
+              {t("editCoinBonus")}
             </Button>
           </div>
         }
@@ -381,6 +410,7 @@ export function FinanceManager({
               <THead>
                 <TR>
                   <TH className="pl-5">{tc("student")}</TH>
+                  <TH>{t("coinsColumn")}</TH>
                   <TH>{t("statusLabel")}</TH>
                   <TH>{t("nextDue")}</TH>
                   <TH>{t("lastPaid")}</TH>
@@ -395,6 +425,12 @@ export function FinanceManager({
                         <p className="truncate font-medium">{s.name}</p>
                         <p className="truncate text-xs text-muted-foreground">{s.phone}</p>
                       </div>
+                    </TD>
+                    <TD>
+                      <span className="inline-flex items-center gap-1.5 font-medium">
+                        <Coins className="size-3.5 text-warning" />
+                        {s.coins}
+                      </span>
                     </TD>
                     <TD>{statusBadge(s.status)}</TD>
                     <TD className="text-muted-foreground">
@@ -492,6 +528,40 @@ export function FinanceManager({
         </form>
       </Modal>
 
+      {/* Early-payment coin bonus modal */}
+      <Modal open={bonusOpen} onClose={() => setBonusOpen(false)} title={t("setCoinBonusTitle")}>
+        <form onSubmit={onBonusSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="bonusCoins">{t("coinBonusLabel", { day: EARLY_PAYMENT_DAY })}</Label>
+            <Input
+              id="bonusCoins"
+              name="bonusCoins"
+              type="number"
+              min={0}
+              step={1}
+              defaultValue={earlyBonusCoins}
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              {t("coinBonusHint", { day: EARLY_PAYMENT_DAY })}
+            </p>
+          </div>
+          {error ? (
+            <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {te(error)}
+            </p>
+          ) : null}
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" onClick={() => setBonusOpen(false)}>
+              {tc("cancel")}
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? tc("saving") : tc("save")}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
       {/* Company/branch (receipt info) modal */}
       <Modal open={infoOpen} onClose={() => setInfoOpen(false)} title={t("receiptInfoTitle")}>
         <form onSubmit={onInfoSubmit} className="space-y-4">
@@ -548,9 +618,32 @@ export function FinanceManager({
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="paidAt">{t("paidOn")}</Label>
-                <Input id="paidAt" name="paidAt" type="date" defaultValue={todayInput()} required />
+                <Input
+                  id="paidAt"
+                  name="paidAt"
+                  type="date"
+                  value={paidAtInput}
+                  onChange={(e) => setPaidAtInput(e.target.value)}
+                  required
+                />
               </div>
             </div>
+
+            {earlyBonusCoins > 0 ? (
+              <p
+                className={cn(
+                  "rounded-lg px-3 py-2 text-xs",
+                  bonusEligible
+                    ? "bg-warning/10 text-warning"
+                    : "bg-muted text-muted-foreground",
+                )}
+              >
+                <Coins className="mr-1 inline size-3.5 align-text-bottom" />
+                {bonusEligible
+                  ? t("coinBonusFieldHintEligible", { amount: earlyBonusCoins })
+                  : t("coinBonusFieldHint", { day: EARLY_PAYMENT_DAY, amount: earlyBonusCoins })}
+              </p>
+            ) : null}
 
             <div className="space-y-1.5">
               <Label htmlFor="method">{t("methodLabel")}</Label>
@@ -666,6 +759,12 @@ export function FinanceManager({
                   </span>
                   <span className="flex items-center gap-2">
                     <span className="font-medium">{formatCurrency(h.amount, locale)}</span>
+                    {h.bonusCoins > 0 ? (
+                      <Badge variant="warning" className="gap-1">
+                        <Coins className="size-3" />
+                        {t("bonusBadge", { amount: h.bonusCoins })}
+                      </Badge>
+                    ) : null}
                     <Button
                       size="icon"
                       variant="ghost"

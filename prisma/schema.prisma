@@ -246,7 +246,13 @@ model FinanceSettings {
   tuitionFee  Float    @default(0)
   companyName String   @default("Brian") // shown on printed receipts
   branchName  String? // optional branch/filial name on receipts
-  updatedAt   DateTime @updatedAt
+
+  // Coins automatically granted to a student when a payment is recorded on
+  // or before EARLY_PAYMENT_DAY (see lib/constants.ts) of the calendar
+  // month, to encourage paying on time. 0 disables the bonus.
+  earlyPaymentBonusCoins Int @default(0)
+
+  updatedAt DateTime @updatedAt
 }
 
 /// One tuition billing cycle for a student. Cycles are monthly, rolling from
@@ -280,6 +286,11 @@ model Payment {
   teacherSharePct         Float?
   teacherShareAmount      Float?
   teacherShareConfirmedAt DateTime?
+
+  // Snapshot of the early-payment coin bonus granted when this cycle was
+  // paid (0 if none/ineligible). Kept even if the finance setting later
+  // changes, and reversed if the payment is undone.
+  bonusCoins Int @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
