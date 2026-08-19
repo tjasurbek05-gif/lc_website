@@ -40,8 +40,51 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/*
+ * Three named themes, switched via a `data-theme` attribute on <html>
+ * (managed by next-themes — see components/layout/theme-toggle.tsx).
+ * `:root` doubles as the "orange" palette so there's always a valid set of
+ * values even before the theme script runs.
+ */
 :root {
   --radius: 1rem;
+
+  /* Orange (apelsin) — default theme. */
+  --background: #fff8f0;
+  --foreground: #2b1a0e;
+  --card: #ffffff;
+  --card-foreground: #2b1a0e;
+  --popover: #ffffff;
+  --popover-foreground: #2b1a0e;
+  --primary: #ea580c;
+  --primary-foreground: #ffffff;
+  --secondary: #ffedd5;
+  --secondary-foreground: #9a3412;
+  --muted: #fdf0e4;
+  --muted-foreground: #92705a;
+  --accent: #fed7aa;
+  --accent-foreground: #9a3412;
+  --destructive: #e11d48;
+  --destructive-foreground: #ffffff;
+  --success: #16a34a;
+  --success-foreground: #ffffff;
+  --warning: #ca8a04;
+  --border: #f4ddc0;
+  --input: #f0d3ae;
+  --ring: #ea580c;
+  --sidebar: #2b1608;
+  --sidebar-foreground: #ecd9c2;
+  --sidebar-accent: #47270f;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #4a2b12;
+
+  /* Brand gradient stops, used by .bg-brand-gradient / .text-gradient. */
+  --brand-from: #ea580c;
+  --brand-via: #f97316;
+  --brand-to: #fbbf24;
+}
+
+[data-theme="light"] {
   --background: #f7f6fb;
   --foreground: #1a1430;
   --card: #ffffff;
@@ -70,13 +113,12 @@
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: #2c2150;
 
-  /* Brand gradient stops, used by .bg-brand-gradient / .text-gradient. */
   --brand-from: #7c3aed;
   --brand-via: #8b5cf6;
   --brand-to: #d946ef;
 }
 
-.dark {
+[data-theme="dark"] {
   --background: #0f0a1e;
   --foreground: #ece9f5;
   --card: #181030;

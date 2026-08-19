@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/layout/logo";
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +36,7 @@ export default async function LandingPage() {
           <Logo />
           <div className="ml-auto flex items-center gap-3">
             <LanguageSwitcher />
+            <ThemeToggle />
             <Link
               href="/login"
               className={cn(buttonVariants({ size: "default" }), "shadow-sm")}
@@ -47,7 +49,7 @@ export default async function LandingPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute -right-32 -top-24 -z-10 size-96 rounded-full bg-indigo-500/10 blur-3xl" />
+        <div className="absolute -right-32 -top-24 -z-10 size-96 rounded-full bg-primary/10 blur-3xl" />
         <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:py-24">
           <div>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
@@ -109,7 +111,7 @@ export default async function LandingPage() {
           <div className="relative mt-8">
             <Link
               href="/login"
-              className="inline-flex h-11 items-center gap-2 rounded-lg bg-white px-6 font-medium text-indigo-700 shadow-sm transition-colors hover:bg-white/90"
+              className="inline-flex h-11 items-center gap-2 rounded-lg bg-white px-6 font-medium text-primary shadow-sm transition-colors hover:bg-white/90"
             >
               {t("getStarted")}
               <ArrowRight className="size-4" />
@@ -156,7 +158,7 @@ function HeroPreview() {
             {bars.map((h, i) => (
               <div
                 key={i}
-                className="flex-1 rounded-t-md bg-gradient-to-t from-indigo-500 to-violet-500"
+                className="bg-brand-gradient flex-1 rounded-t-md"
                 style={{ height: `${h}%` }}
               />
             ))}

@@ -407,6 +407,12 @@
   "language": {
     "label": "Language"
   },
+  "theme": {
+    "label": "Theme",
+    "orange": "Orange",
+    "light": "Light",
+    "dark": "Dark"
+  },
   "errors": {
     "invalid": "Please check the form and try again.",
     "emailTaken": "That email is already in use.",

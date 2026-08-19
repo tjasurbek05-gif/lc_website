@@ -1,12 +1,12 @@
 "use client";
 
-import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 
 /**
- * Brand logo for "Brian".
- * Automatically switches between black and white versions based on theme.
+ * Brand logo for "Brian". Switches between black and white artwork based on
+ * the active theme, or forced white via `variant="light"` for placement on
+ * a permanently-dark surface (e.g. the app sidebar).
  */
 export function Logo({
   className,
@@ -16,14 +16,7 @@ export function Logo({
   variant?: "default" | "light";
 }) {
   const { theme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Auto-detect dark mode
-  const isDark = mounted && theme === "dark";
+  const isDark = variant === "light" || theme === "dark";
   const logoSrc = isDark ? "/logo-white.png" : "/logo-black.png";
 
   return (

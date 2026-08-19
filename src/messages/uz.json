@@ -407,6 +407,12 @@
   "language": {
     "label": "Til"
   },
+  "theme": {
+    "label": "Mavzu",
+    "orange": "Apelsin",
+    "light": "Yorug'",
+    "dark": "Qorong'i"
+  },
   "errors": {
     "invalid": "Formani tekshirib, qayta urinib ko'ring.",
     "emailTaken": "Bu email allaqachon ishlatilmoqda.",
