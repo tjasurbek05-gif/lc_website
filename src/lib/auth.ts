@@ -10,7 +10,7 @@ import {
   type SessionPayload,
 } from "./session";
 
-const MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+const MAX_AGE = 60 * 60 * 24 * 90; // 90 days
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
