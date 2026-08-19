@@ -1,10 +1,11 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { requireRole } from "@/lib/auth";
-import { ROLES } from "@/lib/constants";
+import { EARLY_PAYER_STAT_DAY, ROLES } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import {
   currentPeriod,
   monthPeriod,
+  paidDayOfMonth,
   revenueForPeriod,
   studentStandingStatus,
 } from "@/lib/finance";
@@ -124,6 +125,9 @@ export default async function AdminFinancePage({
     none: rows.filter((r) => r.status === "NONE").length,
     revenueThisView: revenueForPeriod(allPayments, monthPeriod(viewDate)),
     revenueThisMonth: revenueForPeriod(allPayments, currentPeriod(now)),
+    earlyPayers: rows.filter(
+      (r) => r.lastPaidAt && paidDayOfMonth(r.lastPaidAt) <= EARLY_PAYER_STAT_DAY,
+    ).length,
   };
 
   const monthLabel = viewDate.toLocaleDateString(

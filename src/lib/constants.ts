@@ -82,6 +82,13 @@ export const WEEKDAY_KEYS: Record<number, string> = {
  */
 export const EARLY_PAYMENT_DAY = 10;
 
+/**
+ * Dashboard KPI only (independent of EARLY_PAYMENT_DAY/the coin bonus): a
+ * student counts as an "early payer" if their most recent payment was made
+ * on or before this day of the month.
+ */
+export const EARLY_PAYER_STAT_DAY = 15;
+
 /** Landing path for each role's dashboard. */
 export function dashboardPathForRole(role: string): string {
   switch (role) {

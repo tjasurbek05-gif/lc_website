@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   Banknote,
   Building2,
+  CalendarCheck,
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
@@ -31,7 +32,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/page-header";
-import { EARLY_PAYMENT_DAY } from "@/lib/constants";
+import { EARLY_PAYER_STAT_DAY, EARLY_PAYMENT_DAY } from "@/lib/constants";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import {
   getReceiptData,
@@ -80,6 +81,7 @@ type FinanceStats = {
   none: number;
   revenueThisView: number;
   revenueThisMonth: number;
+  earlyPayers: number;
 };
 
 const METHODS = ["CASH", "CLICK", "CARD", "TRANSFER"] as const;
@@ -277,7 +279,7 @@ export function FinanceManager({
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard label={t("fixedFee")} value={formatCurrency(fee, locale)} icon={<Banknote />} />
         <StatCard label={t("totalStudents")} value={stats.total} icon={<Users />} />
         <StatCard
@@ -291,6 +293,13 @@ export function FinanceManager({
           value={stats.overdue}
           icon={<AlertTriangle />}
           accent={stats.overdue > 0 ? "danger" : "primary"}
+        />
+        <StatCard
+          label={t("earlyPayersLabel", { day: EARLY_PAYER_STAT_DAY })}
+          value={stats.earlyPayers}
+          hint={`/ ${stats.total}`}
+          icon={<CalendarCheck />}
+          accent="success"
         />
         <StatCard
           label={t("revenueThisMonth")}
