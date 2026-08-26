@@ -2,6 +2,7 @@ import { getLocale } from "next-intl/server";
 import { requireRole } from "@/lib/auth";
 import { ROLES } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
+import { studentStandingStatus } from "@/lib/finance";
 import { formatDate } from "@/lib/utils";
 import { LessonsManager, type GroupOption } from "@/components/teacher/lessons-manager";
 import { type PreviousLessonView } from "@/components/lessons/previous-lesson";
@@ -22,7 +23,14 @@ export default async function TeacherLessonsPage() {
       orderBy: { name: "asc" },
       include: {
         subject: { select: { name: true } },
-        students: { select: { id: true, name: true }, orderBy: { name: "asc" } },
+        students: {
+          select: {
+            id: true,
+            name: true,
+            payments: { orderBy: { dueDate: "desc" } },
+          },
+          orderBy: { name: "asc" },
+        },
         lessons: { select: { startAt: true } },
       },
     }),
@@ -36,10 +44,15 @@ export default async function TeacherLessonsPage() {
     }),
   ]);
 
+  const now = new Date();
   const groupOptions: GroupOption[] = groups.map((g) => ({
     id: g.id,
     label: `${g.subject.name} · ${g.name}`,
-    students: g.students,
+    students: g.students.map((s) => ({
+      id: s.id,
+      name: s.name,
+      paid: studentStandingStatus(s.payments, now) === "GOOD",
+    })),
     takenDates: g.lessons.map((l) => dateKey(l.startAt)),
   }));
 

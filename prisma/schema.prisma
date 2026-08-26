@@ -247,10 +247,12 @@ model FinanceSettings {
   companyName String   @default("Brian") // shown on printed receipts
   branchName  String? // optional branch/filial name on receipts
 
-  // Coins automatically granted to a student when a payment is recorded on
-  // or before EARLY_PAYMENT_DAY (see lib/constants.ts) of the calendar
-  // month, to encourage paying on time. 0 disables the bonus.
-  earlyPaymentBonusCoins Int @default(0)
+  // Two-tier coin incentive for paying on time (day cutoffs are fixed
+  // constants — see VERY_EARLY_PAYMENT_DAY / EARLY_PAYMENT_DAY in
+  // lib/constants.ts). The bigger, more-exclusive tier wins when a payment
+  // qualifies for both. 0 disables a tier.
+  veryEarlyBonusCoins Int @default(0)
+  earlyBonusCoins     Int @default(0)
 
   updatedAt DateTime @updatedAt
 }

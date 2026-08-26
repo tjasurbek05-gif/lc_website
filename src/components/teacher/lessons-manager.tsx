@@ -3,7 +3,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { CalendarPlus, ClipboardCheck, Coins, Minus, Plus } from "lucide-react";
+import { AlertTriangle, CalendarPlus, ClipboardCheck, Coins, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +21,7 @@ import {
 export type GroupOption = {
   id: string;
   label: string;
-  students: { id: string; name: string }[];
+  students: { id: string; name: string; paid: boolean }[];
   takenDates: string[];
 };
 
@@ -102,7 +102,7 @@ export function LessonsManager({
         studentId: s.id,
         status: r?.present ? "PRESENT" : "ABSENT",
         reason: r?.present ? null : r?.reason || null,
-        coins: r?.present ? clampCoins(r?.coins ?? 0) : 0,
+        coins: r?.present && s.paid ? clampCoins(r?.coins ?? 0) : 0,
       };
     });
 
@@ -237,8 +237,13 @@ export function LessonsManager({
                         key={s.id}
                         className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-2.5 last:border-0"
                       >
-                        <span className="w-32 shrink-0 truncate text-sm font-medium">
-                          {s.name}
+                        <span className="flex w-32 shrink-0 items-center gap-1">
+                          <span className="min-w-0 truncate text-sm font-medium">{s.name}</span>
+                          {!s.paid ? (
+                            <span title={t("notPaidHint")}>
+                              <AlertTriangle className="size-3.5 shrink-0 text-warning" aria-hidden />
+                            </span>
+                          ) : null}
                         </span>
                         {/* Present / absent toggle */}
                         <div className="flex overflow-hidden rounded-lg border border-border">
@@ -269,38 +274,45 @@ export function LessonsManager({
                         </div>
 
                         {present ? (
-                          <div className="ml-auto flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setRow(s.id, { coins: clampCoins((r?.coins ?? 0) - 1) })
-                              }
-                              className="flex size-7 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted"
-                              aria-label="-1"
-                            >
-                              <Minus className="size-3.5" />
-                            </button>
-                            <span
-                              className={cn(
-                                "inline-flex w-12 items-center justify-center gap-0.5 text-sm font-semibold",
-                                (r?.coins ?? 0) > 0 && "text-success",
-                                (r?.coins ?? 0) < 0 && "text-destructive",
-                              )}
-                            >
-                              <Coins className="size-3.5" />
-                              {(r?.coins ?? 0) > 0 ? `+${r?.coins}` : (r?.coins ?? 0)}
+                          s.paid ? (
+                            <div className="ml-auto flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setRow(s.id, { coins: clampCoins((r?.coins ?? 0) - 1) })
+                                }
+                                className="flex size-7 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted"
+                                aria-label="-1"
+                              >
+                                <Minus className="size-3.5" />
+                              </button>
+                              <span
+                                className={cn(
+                                  "inline-flex w-12 items-center justify-center gap-0.5 text-sm font-semibold",
+                                  (r?.coins ?? 0) > 0 && "text-success",
+                                  (r?.coins ?? 0) < 0 && "text-destructive",
+                                )}
+                              >
+                                <Coins className="size-3.5" />
+                                {(r?.coins ?? 0) > 0 ? `+${r?.coins}` : (r?.coins ?? 0)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setRow(s.id, { coins: clampCoins((r?.coins ?? 0) + 1) })
+                                }
+                                className="flex size-7 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted"
+                                aria-label="+1"
+                              >
+                                <Plus className="size-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning">
+                              <AlertTriangle className="size-3.5" />
+                              {t("notPaidHint")}
                             </span>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setRow(s.id, { coins: clampCoins((r?.coins ?? 0) + 1) })
-                              }
-                              className="flex size-7 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted"
-                              aria-label="+1"
-                            >
-                              <Plus className="size-3.5" />
-                            </button>
-                          </div>
+                          )
                         ) : (
                           <Input
                             value={r?.reason ?? ""}

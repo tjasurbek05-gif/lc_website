@@ -1,6 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { requireRole } from "@/lib/auth";
-import { EARLY_PAYER_STAT_DAY, ROLES } from "@/lib/constants";
+import { EARLY_PAYMENT_DAY, ROLES } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
 import {
   currentPeriod,
@@ -126,7 +126,7 @@ export default async function AdminFinancePage({
     revenueThisView: revenueForPeriod(allPayments, monthPeriod(viewDate)),
     revenueThisMonth: revenueForPeriod(allPayments, currentPeriod(now)),
     earlyPayers: rows.filter(
-      (r) => r.lastPaidAt && paidDayOfMonth(r.lastPaidAt) <= EARLY_PAYER_STAT_DAY,
+      (r) => r.lastPaidAt && paidDayOfMonth(r.lastPaidAt) <= EARLY_PAYMENT_DAY,
     ).length,
   };
 
@@ -138,7 +138,8 @@ export default async function AdminFinancePage({
   return (
     <FinanceManager
       fee={fee}
-      earlyBonusCoins={settings?.earlyPaymentBonusCoins ?? 0}
+      veryEarlyBonusCoins={settings?.veryEarlyBonusCoins ?? 0}
+      earlyBonusCoins={settings?.earlyBonusCoins ?? 0}
       companyName={settings?.companyName ?? "Brian"}
       branchName={settings?.branchName ?? null}
       teachers={teachers}

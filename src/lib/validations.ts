@@ -252,7 +252,8 @@ export const recordPaymentSchema = z.object({
 });
 
 export const earlyPaymentBonusSchema = z.object({
-  bonusCoins: z.coerce.number().int().min(0, "Must be 0 or more"),
+  veryEarlyBonusCoins: z.coerce.number().int().min(0, "Must be 0 or more"),
+  earlyBonusCoins: z.coerce.number().int().min(0, "Must be 0 or more"),
 });
 
 export const expenseSchema = z.object({

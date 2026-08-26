@@ -38,6 +38,24 @@ export function paidDayOfMonth(paidAt: Date | string): number {
   return toDate(paidAt).getDate();
 }
 
+/**
+ * Two-tier early-payment coin bonus for a payment made on this day-of-month.
+ * The very-early tier wins if the day qualifies and that tier is enabled
+ * (> 0); otherwise falls through to the early tier if it applies and is
+ * enabled. 0 if neither applies or both are disabled.
+ */
+export function earlyPaymentBonus(
+  day: number,
+  veryEarlyDay: number,
+  veryEarlyBonusCoins: number,
+  earlyDay: number,
+  earlyBonusCoins: number,
+): number {
+  if (day <= veryEarlyDay && veryEarlyBonusCoins > 0) return veryEarlyBonusCoins;
+  if (day <= earlyDay && earlyBonusCoins > 0) return earlyBonusCoins;
+  return 0;
+}
+
 /** "YYYY-MM" period key for a date, used to identify a payout month. */
 export function monthPeriod(date: Date | string): string {
   const d = toDate(date);

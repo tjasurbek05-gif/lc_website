@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
-import { EARLY_PAYMENT_DAY, ROLES } from "@/lib/constants";
-import { addOneMonth, paidDayOfMonth } from "@/lib/finance";
+import { EARLY_PAYMENT_DAY, ROLES, VERY_EARLY_PAYMENT_DAY } from "@/lib/constants";
+import { addOneMonth, earlyPaymentBonus, paidDayOfMonth } from "@/lib/finance";
 import {
   earlyPaymentBonusSchema,
   expenseSchema,
@@ -76,9 +76,9 @@ export async function setFinanceInfo(
 }
 
 /**
- * Coins automatically granted to a student when their payment is recorded
- * on or before EARLY_PAYMENT_DAY of the month (see recordPayment). 0 turns
- * the bonus off.
+ * Two-tier coin amounts automatically granted when a payment is recorded on
+ * or before VERY_EARLY_PAYMENT_DAY / EARLY_PAYMENT_DAY of the month (see
+ * recordPayment). 0 turns a tier off.
  */
 export async function setEarlyPaymentBonus(
   _prev: ActionState,
@@ -86,14 +86,15 @@ export async function setEarlyPaymentBonus(
 ): Promise<ActionState> {
   await requireRole(ROLES.ADMIN);
   const parsed = earlyPaymentBonusSchema.safeParse({
-    bonusCoins: formData.get("bonusCoins"),
+    veryEarlyBonusCoins: formData.get("veryEarlyBonusCoins"),
+    earlyBonusCoins: formData.get("earlyBonusCoins"),
   });
   if (!parsed.success) return { error: "invalid" };
 
   await prisma.financeSettings.upsert({
     where: { id: "singleton" },
-    create: { id: "singleton", earlyPaymentBonusCoins: parsed.data.bonusCoins },
-    update: { earlyPaymentBonusCoins: parsed.data.bonusCoins },
+    create: { id: "singleton", ...parsed.data },
+    update: { ...parsed.data },
   });
   revalidateFinance();
   return { ok: true };
@@ -157,12 +158,15 @@ export async function recordPayment(
   ]);
   const receiptNo = (last?.receiptNo ?? RECEIPT_BASE) + 1;
 
-  // Early-payment incentive: paying on or before EARLY_PAYMENT_DAY of the
-  // month grants the configured coin bonus (0 = disabled).
-  const bonusCoins =
-    paidDayOfMonth(paidAtDate) <= EARLY_PAYMENT_DAY
-      ? (settings?.earlyPaymentBonusCoins ?? 0)
-      : 0;
+  // Two-tier early-payment incentive: the earlier the payment, the bigger
+  // the coin bonus (0 on a tier disables it).
+  const bonusCoins = earlyPaymentBonus(
+    paidDayOfMonth(paidAtDate),
+    VERY_EARLY_PAYMENT_DAY,
+    settings?.veryEarlyBonusCoins ?? 0,
+    EARLY_PAYMENT_DAY,
+    settings?.earlyBonusCoins ?? 0,
+  );
 
   const paidData = {
     amount,

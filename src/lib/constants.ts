@@ -76,18 +76,16 @@ export const WEEKDAY_KEYS: Record<number, string> = {
 };
 
 /**
- * Admin-configured incentive: a tuition payment recorded on or before this
- * day of the calendar month earns the student a coin bonus (see
- * FinanceSettings.earlyPaymentBonusCoins). Motivates paying on time.
+ * Two-tier "pay on time" coin incentive, fixed day-of-month cutoffs (the
+ * admin only configures the coin amounts — see FinanceSettings
+ * veryEarlyBonusCoins / earlyBonusCoins). A payment on or before
+ * VERY_EARLY_PAYMENT_DAY earns the bigger tier; on or before
+ * EARLY_PAYMENT_DAY (but after the very-early cutoff) earns the smaller
+ * tier. EARLY_PAYMENT_DAY doubles as the admin dashboard's "paid by day N"
+ * KPI cutoff.
  */
-export const EARLY_PAYMENT_DAY = 10;
-
-/**
- * Dashboard KPI only (independent of EARLY_PAYMENT_DAY/the coin bonus): a
- * student counts as an "early payer" if their most recent payment was made
- * on or before this day of the month.
- */
-export const EARLY_PAYER_STAT_DAY = 15;
+export const VERY_EARLY_PAYMENT_DAY = 5;
+export const EARLY_PAYMENT_DAY = 15;
 
 /** Landing path for each role's dashboard. */
 export function dashboardPathForRole(role: string): string {

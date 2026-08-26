@@ -9,6 +9,7 @@ import {
   ROLES,
   coinLimitFor,
 } from "@/lib/constants";
+import { studentStandingStatus } from "@/lib/finance";
 import { lessonEntrySchema, teacherLessonSchema } from "@/lib/validations";
 
 export type ActionState = { error?: string; ok?: boolean };
@@ -42,17 +43,28 @@ export async function createLesson(
   if (!parsedMeta.success) return { error: "invalid" };
   const d = parsedMeta.data;
 
-  // The teacher must own the group; pull the roster to validate entries.
+  // The teacher must own the group; pull the roster (with payment history,
+  // to gate coins on paid-up standing) to validate entries.
   const group = await prisma.group.findUnique({
     where: { id: d.groupId },
     select: {
       teacherId: true,
-      students: { select: { id: true } },
+      students: {
+        select: {
+          id: true,
+          payments: { orderBy: { dueDate: "desc" } },
+        },
+      },
     },
   });
   if (!group || group.teacherId !== session.userId) return { error: "forbidden" };
 
-  const enrolled = new Set(group.students.map((s) => s.id));
+  const now = new Date();
+  // Maps each enrolled student to whether they're paid up. Only enrolled
+  // students appear here, so a missing key means "not a member".
+  const enrolled = new Map(
+    group.students.map((s) => [s.id, studentStandingStatus(s.payments, now) === "GOOD"]),
+  );
   const limit = coinLimitFor(d.type);
 
   const clean: {
@@ -65,13 +77,15 @@ export async function createLesson(
     const parsed = lessonEntrySchema.safeParse(raw);
     if (!parsed.success) return { error: "invalid" };
     const e = parsed.data;
-    if (!enrolled.has(e.studentId)) continue; // ignore non-members
+    const paid = enrolled.get(e.studentId);
+    if (paid === undefined) continue; // ignore non-members
     if (e.coins < -limit || e.coins > limit) return { error: "coinRange" };
     clean.push({
       studentId: e.studentId,
       status: e.status,
-      // Coins are only meaningful for present students; absent students get 0.
-      coins: e.status === ATTENDANCE_STATUS.ABSENT ? 0 : e.coins,
+      // Coins only apply to present, paid-up students; absent or unpaid
+      // students always get 0.
+      coins: e.status === ATTENDANCE_STATUS.ABSENT || !paid ? 0 : e.coins,
       reason: e.status === ATTENDANCE_STATUS.ABSENT ? e.reason : null,
     });
   }

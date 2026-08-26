@@ -32,7 +32,8 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/page-header";
-import { EARLY_PAYER_STAT_DAY, EARLY_PAYMENT_DAY } from "@/lib/constants";
+import { EARLY_PAYMENT_DAY, VERY_EARLY_PAYMENT_DAY } from "@/lib/constants";
+import { earlyPaymentBonus, paidDayOfMonth } from "@/lib/finance";
 import { cn, formatCurrency, formatDate } from "@/lib/utils";
 import {
   getReceiptData,
@@ -97,6 +98,7 @@ function localeToLang(locale: string): "uz" | "ru" | "en" {
 
 export function FinanceManager({
   fee,
+  veryEarlyBonusCoins,
   earlyBonusCoins,
   companyName,
   branchName,
@@ -112,6 +114,7 @@ export function FinanceManager({
   hint,
 }: {
   fee: number;
+  veryEarlyBonusCoins: number;
   earlyBonusCoins: number;
   companyName: string;
   branchName: string | null;
@@ -167,8 +170,18 @@ export function FinanceManager({
       : 0;
 
   const paidDay = Number(paidAtInput.split("-")[2]);
-  const bonusEligible =
-    earlyBonusCoins > 0 && Number.isFinite(paidDay) && paidDay <= EARLY_PAYMENT_DAY;
+  const bonusAmount = Number.isFinite(paidDay)
+    ? earlyPaymentBonus(
+        paidDay,
+        VERY_EARLY_PAYMENT_DAY,
+        veryEarlyBonusCoins,
+        EARLY_PAYMENT_DAY,
+        earlyBonusCoins,
+      )
+    : 0;
+  const bonusTier: "veryEarly" | "early" | null =
+    bonusAmount === 0 ? null : paidDay <= VERY_EARLY_PAYMENT_DAY ? "veryEarly" : "early";
+  const anyBonusActive = veryEarlyBonusCoins > 0 || earlyBonusCoins > 0;
 
   async function onFeeSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -295,7 +308,7 @@ export function FinanceManager({
           accent={stats.overdue > 0 ? "danger" : "primary"}
         />
         <StatCard
-          label={t("earlyPayersLabel", { day: EARLY_PAYER_STAT_DAY })}
+          label={t("earlyPayersLabel", { day: EARLY_PAYMENT_DAY })}
           value={stats.earlyPayers}
           hint={`/ ${stats.total}`}
           icon={<CalendarCheck />}
@@ -541,10 +554,26 @@ export function FinanceManager({
       <Modal open={bonusOpen} onClose={() => setBonusOpen(false)} title={t("setCoinBonusTitle")}>
         <form onSubmit={onBonusSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="bonusCoins">{t("coinBonusLabel", { day: EARLY_PAYMENT_DAY })}</Label>
+            <Label htmlFor="veryEarlyBonusCoins">
+              {t("veryEarlyBonusLabel", { day: VERY_EARLY_PAYMENT_DAY })}
+            </Label>
             <Input
-              id="bonusCoins"
-              name="bonusCoins"
+              id="veryEarlyBonusCoins"
+              name="veryEarlyBonusCoins"
+              type="number"
+              min={0}
+              step={1}
+              defaultValue={veryEarlyBonusCoins}
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="earlyBonusCoins">
+              {t("earlyBonusLabel", { day: EARLY_PAYMENT_DAY })}
+            </Label>
+            <Input
+              id="earlyBonusCoins"
+              name="earlyBonusCoins"
               type="number"
               min={0}
               step={1}
@@ -552,7 +581,7 @@ export function FinanceManager({
               required
             />
             <p className="text-xs text-muted-foreground">
-              {t("coinBonusHint", { day: EARLY_PAYMENT_DAY })}
+              {t("coinBonusHint", { veryEarlyDay: VERY_EARLY_PAYMENT_DAY, earlyDay: EARLY_PAYMENT_DAY })}
             </p>
           </div>
           {error ? (
@@ -638,19 +667,22 @@ export function FinanceManager({
               </div>
             </div>
 
-            {earlyBonusCoins > 0 ? (
+            {anyBonusActive ? (
               <p
                 className={cn(
                   "rounded-lg px-3 py-2 text-xs",
-                  bonusEligible
-                    ? "bg-warning/10 text-warning"
-                    : "bg-muted text-muted-foreground",
+                  bonusTier ? "bg-warning/10 text-warning" : "bg-muted text-muted-foreground",
                 )}
               >
                 <Coins className="mr-1 inline size-3.5 align-text-bottom" />
-                {bonusEligible
-                  ? t("coinBonusFieldHintEligible", { amount: earlyBonusCoins })
-                  : t("coinBonusFieldHint", { day: EARLY_PAYMENT_DAY, amount: earlyBonusCoins })}
+                {bonusTier === "veryEarly"
+                  ? t("coinBonusFieldHintVeryEarly", { amount: bonusAmount })
+                  : bonusTier === "early"
+                    ? t("coinBonusFieldHintEarly", { amount: bonusAmount })
+                    : t("coinBonusFieldHintMissed", {
+                        veryEarlyDay: VERY_EARLY_PAYMENT_DAY,
+                        earlyDay: EARLY_PAYMENT_DAY,
+                      })}
               </p>
             ) : null}
 
@@ -771,7 +803,12 @@ export function FinanceManager({
                     {h.bonusCoins > 0 ? (
                       <Badge variant="warning" className="gap-1">
                         <Coins className="size-3" />
-                        {t("bonusBadge", { amount: h.bonusCoins })}
+                        {t(
+                          paidDayOfMonth(h.paidAt) <= VERY_EARLY_PAYMENT_DAY
+                            ? "bonusBadgeVeryEarly"
+                            : "bonusBadgeEarly",
+                          { amount: h.bonusCoins },
+                        )}
                       </Badge>
                     ) : null}
                     <Button
