@@ -27,6 +27,7 @@ export default async function TeacherLessonsPage() {
           select: {
             id: true,
             name: true,
+            coinWaiver: true,
             payments: { orderBy: { dueDate: "desc" } },
           },
           orderBy: { name: "asc" },
@@ -51,7 +52,7 @@ export default async function TeacherLessonsPage() {
     students: g.students.map((s) => ({
       id: s.id,
       name: s.name,
-      paid: studentStandingStatus(s.payments, now) === "GOOD",
+      paid: studentStandingStatus(s.payments, now) === "GOOD" || s.coinWaiver,
     })),
     takenDates: g.lessons.map((l) => dateKey(l.startAt)),
   }));

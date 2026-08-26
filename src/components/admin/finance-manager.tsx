@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Coins,
+  HeartHandshake,
   History,
   Pencil,
   Receipt,
@@ -41,6 +42,7 @@ import {
   setEarlyPaymentBonus,
   setFinanceInfo,
   setTuitionFee,
+  toggleCoinWaiver,
   undoLastPayment,
   type ReceiptData,
 } from "@/app/actions/finance";
@@ -58,6 +60,7 @@ export type StudentFinanceRow = {
   name: string;
   phone: string;
   coins: number;
+  coinWaiver: boolean;
   status: "GOOD" | "OVERDUE" | "NONE";
   dueDate: string | null;
   dueAmount: number | null;
@@ -243,6 +246,11 @@ export function FinanceManager({
   async function onUndo(row: StudentFinanceRow) {
     if (!window.confirm(t("undoPaymentConfirm"))) return;
     await undoLastPayment(row.id);
+    router.refresh();
+  }
+
+  async function onToggleWaiver(row: StudentFinanceRow) {
+    await toggleCoinWaiver(row.id);
     router.refresh();
   }
 
@@ -454,7 +462,17 @@ export function FinanceManager({
                         {s.coins}
                       </span>
                     </TD>
-                    <TD>{statusBadge(s.status)}</TD>
+                    <TD>
+                      <div className="flex flex-wrap items-center gap-1">
+                        {statusBadge(s.status)}
+                        {s.coinWaiver ? (
+                          <Badge variant="primary" className="gap-1">
+                            <HeartHandshake className="size-3" />
+                            {t("coinWaiverBadge")}
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </TD>
                     <TD className="text-muted-foreground">
                       {s.dueDate ? (
                         <>
@@ -487,6 +505,16 @@ export function FinanceManager({
                       <div className="flex justify-end gap-1">
                         <Button size="sm" onClick={() => openPay(s)}>
                           {t("recordPayment")}
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => onToggleWaiver(s)}
+                          aria-label={s.coinWaiver ? t("revokeCoinWaiver") : t("grantCoinWaiver")}
+                          title={s.coinWaiver ? t("revokeCoinWaiver") : t("grantCoinWaiver")}
+                          className={s.coinWaiver ? "text-primary hover:bg-primary/10" : undefined}
+                        >
+                          <HeartHandshake className={s.coinWaiver ? "fill-primary/20" : undefined} />
                         </Button>
                         {s.history.length ? (
                           <>

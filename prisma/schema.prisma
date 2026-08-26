@@ -30,6 +30,11 @@ model User {
   // Coin balance (students earn coins from teachers and spend them in the shop).
   coins Int @default(0)
 
+  // Admin-granted exemption: this student may still earn coins from
+  // teachers even while not paid up (e.g. documented financial hardship).
+  // Independent of payment status — has no effect on finance reporting.
+  coinWaiver Boolean @default(false)
+
   // Fixed monthly salary for TEACHER accounts, set by the CEO. Unused by
   // other roles.
   salary Float?

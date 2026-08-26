@@ -52,6 +52,7 @@ export async function createLesson(
       students: {
         select: {
           id: true,
+          coinWaiver: true,
           payments: { orderBy: { dueDate: "desc" } },
         },
       },
@@ -63,7 +64,10 @@ export async function createLesson(
   // Maps each enrolled student to whether they're paid up. Only enrolled
   // students appear here, so a missing key means "not a member".
   const enrolled = new Map(
-    group.students.map((s) => [s.id, studentStandingStatus(s.payments, now) === "GOOD"]),
+    group.students.map((s) => [
+      s.id,
+      studentStandingStatus(s.payments, now) === "GOOD" || s.coinWaiver,
+    ]),
   );
   const limit = coinLimitFor(d.type);
 

@@ -298,6 +298,31 @@ export async function undoLastPayment(studentId: string): Promise<ActionState> {
   return { ok: true };
 }
 
+/* ------------------------------ Coin waiver ----------------------------- */
+
+/**
+ * Toggle a student's coin waiver: an admin-granted exemption letting them
+ * keep earning coins from teachers even while not paid up (e.g. documented
+ * financial hardship). Purely a coin-earning permission — doesn't change
+ * their payment status or any finance reporting.
+ */
+export async function toggleCoinWaiver(studentId: string): Promise<ActionState> {
+  await requireRole(ROLES.ADMIN);
+  const student = await prisma.user.findUnique({
+    where: { id: studentId },
+    select: { role: true, coinWaiver: true },
+  });
+  if (!student || student.role !== ROLES.STUDENT) return { error: "invalid" };
+
+  await prisma.user.update({
+    where: { id: studentId },
+    data: { coinWaiver: !student.coinWaiver },
+  });
+  revalidateFinance();
+  revalidatePath("/teacher/lessons");
+  return { ok: true };
+}
+
 /* ---------------------------- Teacher payouts --------------------------- */
 
 export async function setTeacherSalary(

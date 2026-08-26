@@ -47,6 +47,7 @@ export default async function AdminFinancePage({
         name: true,
         phone: true,
         coins: true,
+        coinWaiver: true,
         payments: { orderBy: { dueDate: "desc" } },
         enrolledGroups: {
           select: {
@@ -75,6 +76,7 @@ export default async function AdminFinancePage({
       name: s.name,
       phone: s.phone,
       coins: s.coins,
+      coinWaiver: s.coinWaiver,
       status: studentStandingStatus(s.payments, now),
       dueDate: open ? open.dueDate.toISOString() : null,
       dueAmount: open ? open.amount : null,
