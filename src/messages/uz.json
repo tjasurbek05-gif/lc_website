@@ -367,6 +367,8 @@
     "shopTitle": "Tanga do'koni",
     "shopHint": "Darslarda ishlagan tangalaringizni mukofotlarga sarflang.",
     "noProductsStudent": "Do'konda hali hech narsa yo'q. Keyinroq qarang!",
+    "teacherShopHint": "O'quvchilar tangalarini nimaga almashtirishi mumkinligi (faqat ko'rish uchun).",
+    "noProductsTeacher": "Do'konda hali hech narsa yo'q.",
     "order": "Buyurtma",
     "ordering": "Buyurtma berilmoqda…",
     "notEnough": "Tanga yetarli emas",

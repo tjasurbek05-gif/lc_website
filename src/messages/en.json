@@ -367,6 +367,8 @@
     "shopTitle": "Coin shop",
     "shopHint": "Spend the coins you earned in class on rewards.",
     "noProductsStudent": "Nothing in the shop yet. Check back later!",
+    "teacherShopHint": "What students can redeem their coins for (view only).",
+    "noProductsTeacher": "Nothing in the shop yet.",
     "order": "Order",
     "ordering": "Ordering…",
     "notEnough": "Not enough coins",

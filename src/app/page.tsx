@@ -2,10 +2,10 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import {
   ArrowRight,
-  BookOpen,
   ClipboardList,
   GraduationCap,
   LayoutDashboard,
+  Presentation,
   TrendingUp,
   Users,
 } from "lucide-react";
@@ -134,8 +134,8 @@ export default async function LandingPage() {
 function HeroPreview() {
   const bars = [55, 70, 62, 80, 88, 94];
   const stats = [
-    { icon: Users, label: "Students", value: "120+" },
-    { icon: BookOpen, label: "Subjects", value: "12+" },
+    { icon: Users, label: "Students", value: "340+" },
+    { icon: Presentation, label: "Teachers", value: "30+" },
     { icon: TrendingUp, label: "Avg", value: "86%" },
   ];
   return (

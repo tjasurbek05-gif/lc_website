@@ -40,6 +40,7 @@ const NAV: Record<Role, NavItem[]> = {
   TEACHER: [
     { href: "/teacher", key: "home", icon: LayoutDashboard },
     { href: "/teacher/lessons", key: "lesson", icon: ClipboardCheck },
+    { href: "/teacher/shop", key: "coinShop", icon: Store },
     { href: "/teacher/feedback", key: "feedback", icon: MessageSquare },
   ],
   STUDENT: [
