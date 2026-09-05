@@ -102,6 +102,25 @@ export function studentStandingStatus(
   return paymentStatus(open, now) === "OVERDUE" ? "OVERDUE" : "GOOD";
 }
 
+/**
+ * Whether a student may currently earn coins from a teacher. Paid-up
+ * students always can. A student behind on payment (or with no payment
+ * record at all) still can too, through a grace period lasting until
+ * `graceDay` of the calendar month — coins are only withheld from day
+ * `graceDay + 1` onward. An admin-granted coin waiver (financial hardship)
+ * bypasses this entirely, at any time.
+ */
+export function canEarnCoins(
+  payments: PaymentLike[],
+  coinWaiver: boolean,
+  graceDay: number,
+  now: Date = new Date(),
+): boolean {
+  if (coinWaiver) return true;
+  if (studentStandingStatus(payments, now) === "GOOD") return true;
+  return now.getDate() <= graceDay;
+}
+
 export type RevenuePoint = { key: string; label: string; total: number };
 
 /** Total amount collected per calendar month (by paidAt), oldest first. */

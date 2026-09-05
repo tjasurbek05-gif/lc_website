@@ -5,11 +5,12 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import {
   ATTENDANCE_STATUS,
+  EARLY_PAYMENT_DAY,
   LESSON_STATUS,
   ROLES,
   coinLimitFor,
 } from "@/lib/constants";
-import { studentStandingStatus } from "@/lib/finance";
+import { canEarnCoins } from "@/lib/finance";
 import { lessonEntrySchema, teacherLessonSchema } from "@/lib/validations";
 
 export type ActionState = { error?: string; ok?: boolean };
@@ -61,12 +62,12 @@ export async function createLesson(
   if (!group || group.teacherId !== session.userId) return { error: "forbidden" };
 
   const now = new Date();
-  // Maps each enrolled student to whether they're paid up. Only enrolled
-  // students appear here, so a missing key means "not a member".
+  // Maps each enrolled student to whether they may currently earn coins.
+  // Only enrolled students appear here, so a missing key means "not a member".
   const enrolled = new Map(
     group.students.map((s) => [
       s.id,
-      studentStandingStatus(s.payments, now) === "GOOD" || s.coinWaiver,
+      canEarnCoins(s.payments, s.coinWaiver, EARLY_PAYMENT_DAY, now),
     ]),
   );
   const limit = coinLimitFor(d.type);

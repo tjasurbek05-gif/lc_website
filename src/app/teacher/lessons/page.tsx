@@ -1,8 +1,8 @@
 import { getLocale } from "next-intl/server";
 import { requireRole } from "@/lib/auth";
-import { ROLES } from "@/lib/constants";
+import { EARLY_PAYMENT_DAY, ROLES } from "@/lib/constants";
 import { prisma } from "@/lib/prisma";
-import { studentStandingStatus } from "@/lib/finance";
+import { canEarnCoins } from "@/lib/finance";
 import { formatDate } from "@/lib/utils";
 import { LessonsManager, type GroupOption } from "@/components/teacher/lessons-manager";
 import { type PreviousLessonView } from "@/components/lessons/previous-lesson";
@@ -52,7 +52,7 @@ export default async function TeacherLessonsPage() {
     students: g.students.map((s) => ({
       id: s.id,
       name: s.name,
-      paid: studentStandingStatus(s.payments, now) === "GOOD" || s.coinWaiver,
+      paid: canEarnCoins(s.payments, s.coinWaiver, EARLY_PAYMENT_DAY, now),
     })),
     takenDates: g.lessons.map((l) => dateKey(l.startAt)),
   }));

@@ -82,7 +82,10 @@ export const WEEKDAY_KEYS: Record<number, string> = {
  * VERY_EARLY_PAYMENT_DAY earns the bigger tier; on or before
  * EARLY_PAYMENT_DAY (but after the very-early cutoff) earns the smaller
  * tier. EARLY_PAYMENT_DAY doubles as the admin dashboard's "paid by day N"
- * KPI cutoff.
+ * KPI cutoff, and as the grace period before a behind-on-payment student
+ * stops being able to earn coins from teachers (see lib/finance.ts
+ * canEarnCoins) — coins are only withheld from day EARLY_PAYMENT_DAY + 1
+ * onward, not the moment a cycle is technically overdue.
  */
 export const VERY_EARLY_PAYMENT_DAY = 5;
 export const EARLY_PAYMENT_DAY = 15;
